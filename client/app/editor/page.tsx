@@ -1,3 +1,5 @@
+import Canvas from "@/components/editor/Canvas";
+
 export default function EditorPage() {
   return (
     <div className="h-screen flex bg-gray-800 text-white">
@@ -11,9 +13,7 @@ export default function EditorPage() {
 
       {/* Canvas Area */}
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-[800px] h-[500px] bg-white text-black flex items-center justify-center">
-          Canvas Area
-        </div>
+        <Canvas />
       </div>
 
     </div>
