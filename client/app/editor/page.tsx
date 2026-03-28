@@ -7,36 +7,83 @@ import * as fabric from "fabric";
 export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
 
+  // ✅ Add Text
   const addText = () => {
     if (!canvas) return;
 
     const text = new fabric.Textbox("New Text", {
       left: 100,
       top: 100,
-      fontSize: 24,  
+      fontSize: 24,
+      fill: "black",
     });
 
     canvas.add(text);
     canvas.setActiveObject(text);
   };
 
+  // ✅ Upload Image
+
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!canvas) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      const imgUrl = reader.result as string;
+
+      const img = await fabric.Image.fromURL(imgUrl);
+
+      img.set({
+        left: 100,
+        top: 100,
+        scaleX: 0.5,
+        scaleY: 0.5,
+      });
+
+      canvas.add(img);
+      canvas.setActiveObject(img);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="h-screen flex bg-gray-800 text-white">
       
-      {/* Sidebar */}
+      {/* 🔥 Sidebar */}
       <div className="w-64 bg-gray-900 p-4">
         <h2 className="text-xl font-bold mb-4">Tools</h2>
 
-        <button 
+        {/* Add Text Button */}
+        <button
           onClick={addText}
-          className="block mb-2 bg-blue-500 px-3 py-1 rounded"
+          className="block mb-3 bg-blue-500 px-3 py-1 rounded"
         >
           Add Text
         </button>
 
+        {/* Upload Button */}
+        <label className="block">
+          <span className="bg-green-600 hover:bg-green-700 transition px-4 py-2 rounded-lg cursor-pointer inline-block font-medium">
+            📁 Upload Image
+          </span>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+        </label>
       </div>
 
-      {/* Canvas*/}
+      {/* 🎨 Canvas */}
       <div className="flex-1 flex items-center justify-center">
         <Canvas />
       </div>
