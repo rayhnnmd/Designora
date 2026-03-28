@@ -2,6 +2,7 @@
 
 import Canvas from "@/components/editor/Canvas";
 import { useCanvasStore } from "@/store/canvasStore";
+import { useEffect } from "react";
 import * as fabric from "fabric";
 
 export default function EditorPage() {
@@ -32,6 +33,32 @@ export default function EditorPage() {
     }
   };
 
+  // Color Function
+
+  const changecolor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    if ("set" in activeObject) {
+      activeObject.set("fill", e.target.value);
+      canvas.renderAll();
+    }
+  };
+
+  // Font Size Control
+  const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    if ("set" in activeObject && "fontSize" in activeObject) {
+      activeObject.set("fontSize", parseInt(e.target.value));
+      canvas.renderAll();
+    }
+  };
+
   // ✅ Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -59,6 +86,23 @@ export default function EditorPage() {
 
     reader.readAsDataURL(file);
   };
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Delete" && canvas) {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+          canvas.remove(activeObject);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [canvas]);
 
   return (
     <div className="h-screen flex bg-gray-800 text-white">
@@ -96,6 +140,36 @@ export default function EditorPage() {
             className="hidden"
           />
         </label>
+
+        {/* Color Picker */}
+        <div className="mt-4">
+          <p className="mb-2 font-medium">Text Color</p>
+
+          <input
+            type="color"
+            onChange={changecolor}
+            className="w-full h-10 cursor-pointer"
+          />
+        </div>
+      </div>
+
+
+      {/* Font Size Slider */}
+      <div className="mt-4">
+        <p className="mb-2 font-medium">Font Size</p>
+
+        <input
+          type="range"
+          min="10"
+          max="100"
+          defaultValue="24"
+          onChange={changeFontSize}
+          className="w-full"
+          />
+
+          <p className="text-sm mt-1 text-gray-300">
+            Adjust text size
+          </p>
       </div>
 
       {/* 🎨 Canvas */}
