@@ -22,8 +22,17 @@ export default function EditorPage() {
     canvas.setActiveObject(text);
   };
 
-  // ✅ Upload Image
+  // ✅ Delete Selected
+  const deleteSelected = () => {
+    if (!canvas) return;
 
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      canvas.remove(activeObject);
+    }
+  };
+
+  // ✅ Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -35,9 +44,7 @@ export default function EditorPage() {
     const reader = new FileReader();
 
     reader.onload = async () => {
-      const imgUrl = reader.result as string;
-
-      const img = await fabric.Image.fromURL(imgUrl);
+      const img = await fabric.Image.fromURL(reader.result as string);
 
       img.set({
         left: 100,
@@ -60,17 +67,25 @@ export default function EditorPage() {
       <div className="w-64 bg-gray-900 p-4">
         <h2 className="text-xl font-bold mb-4">Tools</h2>
 
-        {/* Add Text Button */}
+        {/* Add Text */}
         <button
           onClick={addText}
-          className="block mb-3 bg-blue-500 px-3 py-1 rounded"
+          className="block mb-4 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-medium"
         >
           Add Text
         </button>
 
-        {/* Upload Button */}
+        {/* Delete */}
+        <button
+          onClick={deleteSelected}
+          className="block mb-4 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-medium"
+        >
+          Delete Selected
+        </button>
+
+        {/* Upload Image */}
         <label className="block">
-          <span className="bg-green-600 hover:bg-green-700 transition px-4 py-2 rounded-lg cursor-pointer inline-block font-medium">
+          <span className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium">
             📁 Upload Image
           </span>
 

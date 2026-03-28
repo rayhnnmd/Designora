@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import * as fabric from "fabric";
-import { useCanvasStore } from "@/store/canvasStore"
+import { useCanvasStore } from "@/store/canvasStore";
 
 export default function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const setCanvas = useCanvasStore((state) => state.setCanvas); 
+  const setCanvas = useCanvasStore((state) => state.setCanvas);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -18,6 +18,15 @@ export default function Canvas() {
     });
 
     setCanvas(canvas);
+
+    // Default text
+    const text = new fabric.Text("Hello Designora 🎨", {
+      left: 100,
+      top: 100,
+      fontSize: 24,
+    });
+
+    canvas.add(text);
 
     return () => {
       canvas.dispose();
