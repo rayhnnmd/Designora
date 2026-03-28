@@ -59,6 +59,17 @@ export default function EditorPage() {
     }
   };
 
+  // Font Family Dropdown
+  const changeFontFamily = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+    if ("set" in activeObject && "fontFamily" in activeObject) {
+      activeObject.set("fontFamily", e.target.value);
+      canvas.renderAll();
+    }
+  };
+
   // ✅ Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -170,6 +181,22 @@ export default function EditorPage() {
           <p className="text-sm mt-1 text-gray-300">
             Adjust text size
           </p>
+      </div>
+
+      {/* DropDown UI */}
+      <div className="mt-4">
+        <p className="mb-2 font-medium">Font Family</p>
+
+        <select
+          onChange={changeFontFamily}
+          className="w-full p-2 bg-gray-700 rounded"
+        >
+          <option value="Arial">Arial</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Georgia">Georgia</option>
+        </select>
       </div>
 
       {/* 🎨 Canvas */}
