@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
 import Canvas from "@/components/editor/Canvas";
 import { useCanvasStore } from "@/store/canvasStore";
-import { useEffect } from "react";
 import * as fabric from "fabric";
+import { useState } from "react";
 
 export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
+
+  const [fontSize, setFontSize] = useState(24);
 
   // ✅ Add Text
   const addText = () => {
@@ -15,7 +18,7 @@ export default function EditorPage() {
     const text = new fabric.Textbox("New Text", {
       left: 100,
       top: 100,
-      fontSize: 24,
+      fontSize: fontSize,
       fill: "black",
     });
 
@@ -30,43 +33,6 @@ export default function EditorPage() {
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
       canvas.remove(activeObject);
-    }
-  };
-
-  // Color Function
-
-  const changecolor = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!canvas) return;
-
-    const activeObject = canvas.getActiveObject();
-    if (!activeObject) return;
-
-    if ("set" in activeObject) {
-      activeObject.set("fill", e.target.value);
-      canvas.renderAll();
-    }
-  };
-
-  // Font Size Control
-  const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!canvas) return;
-    const activeObject = canvas.getActiveObject();
-    if (!activeObject) return;
-
-    if ("set" in activeObject && "fontSize" in activeObject) {
-      activeObject.set("fontSize", parseInt(e.target.value));
-      canvas.renderAll();
-    }
-  };
-
-  // Font Family Dropdown
-  const changeFontFamily = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!canvas) return;
-    const activeObject = canvas.getActiveObject();
-    if (!activeObject) return;
-    if ("set" in activeObject && "fontFamily" in activeObject) {
-      activeObject.set("fontFamily", e.target.value);
-      canvas.renderAll();
     }
   };
 
@@ -98,6 +64,65 @@ export default function EditorPage() {
     reader.readAsDataURL(file);
   };
 
+  // ✅ Color Picker
+  const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    if ("set" in activeObject) {
+      activeObject.set("fill", e.target.value);
+      canvas.renderAll();
+    }
+  };
+
+  // ✅ Font Size
+  const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const size = parseInt(e.target.value);
+    setFontSize(size);
+
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    if ("set" in activeObject && "fontSize" in activeObject) {
+      activeObject.set("fontSize", size);
+      canvas.renderAll();
+    }
+  };
+
+  // ✅ Font Family
+  const changeFontFamily = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    if ("set" in activeObject && "fontFamily" in activeObject) {
+      activeObject.set("fontFamily", e.target.value);
+      canvas.renderAll();
+    }
+  };
+
+  // ✅ Export Image
+  const exportImage = () => {
+    if (!canvas) return;
+
+    const dataURL = canvas.toDataURL({
+      format: "png",
+      quality: 1,
+      multiplier: 2,
+    });
+
+    const link = document.createElement("a");
+    link.href = dataURL;
+    link.download = "designora.png";
+    link.click();
+  };
+
+  // ✅ Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Delete" && canvas) {
@@ -109,10 +134,7 @@ export default function EditorPage() {
     };
 
     window.addEventListener("keydown", handleKey);
-
-    return () => {
-      window.removeEventListener("keydown", handleKey);
-    };
+    return () => window.removeEventListener("keydown", handleKey);
   }, [canvas]);
 
   return (
@@ -138,8 +160,16 @@ export default function EditorPage() {
           Delete Selected
         </button>
 
+        {/* Export */}
+        <button
+          onClick={exportImage}
+          className="block mb-4 bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg font-medium"
+        >
+          Export Image
+        </button>
+
         {/* Upload Image */}
-        <label className="block">
+        <label className="block mb-4">
           <span className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium">
             📁 Upload Image
           </span>
@@ -155,48 +185,43 @@ export default function EditorPage() {
         {/* Color Picker */}
         <div className="mt-4">
           <p className="mb-2 font-medium">Text Color</p>
-
           <input
             type="color"
-            onChange={changecolor}
+            onChange={changeColor}
             className="w-full h-10 cursor-pointer"
           />
         </div>
-      </div>
 
-
-      {/* Font Size Slider */}
-      <div className="mt-4">
-        <p className="mb-2 font-medium">Font Size</p>
-
-        <input
-          type="range"
-          min="10"
-          max="100"
-          defaultValue="24"
-          onChange={changeFontSize}
-          className="w-full"
+        {/* Font Size */}
+        <div className="mt-4">
+          <p className="mb-2 font-medium">Font Size</p>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            value={fontSize}
+            onChange={changeFontSize}
+            className="w-full"
           />
-
           <p className="text-sm mt-1 text-gray-300">
-            Adjust text size
+            Size: {fontSize}px
           </p>
-      </div>
+        </div>
 
-      {/* DropDown UI */}
-      <div className="mt-4">
-        <p className="mb-2 font-medium">Font Family</p>
-
-        <select
-          onChange={changeFontFamily}
-          className="w-full p-2 bg-gray-700 rounded"
-        >
-          <option value="Arial">Arial</option>
-          <option value="Courier New">Courier New</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Verdana">Verdana</option>
-          <option value="Georgia">Georgia</option>
-        </select>
+        {/* Font Family */}
+        <div className="mt-4">
+          <p className="mb-2 font-medium">Font Family</p>
+          <select
+            onChange={changeFontFamily}
+            className="w-full p-2 bg-gray-700 rounded-lg"
+          >
+            <option value="Arial">Arial</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Georgia">Georgia</option>
+          </select>
+        </div>
       </div>
 
       {/* 🎨 Canvas */}
