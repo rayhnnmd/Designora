@@ -5,11 +5,15 @@ import Canvas from "@/components/editor/Canvas";
 import { useCanvasStore } from "@/store/canvasStore";
 import * as fabric from "fabric";
 import { useState } from "react";
+import { useRef } from "react";
 
 export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
-
   const [fontSize, setFontSize] = useState(24);
+  const [undoStack, setUndoStack] = useState<any[]>([]);
+  const [redoStack, setRedoStack] = useState<any[]>([]);
+  const isRestoring = useRef(false);
+  const undoStackRef = useRef<any[]>([]);
 
   // ✅ Add Text
   const addText = () => {
@@ -64,6 +68,19 @@ export default function EditorPage() {
     reader.readAsDataURL(file);
   };
 
+  // Save History
+  const saveState = () => {
+    if (!canvas || isRestoring.current) return;
+
+    const json = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
+
+    const newStack = [...undoStackRef.current, json];
+    undoStackRef.current = newStack;
+    setUndoStack(newStack);
+
+    setRedoStack([]);
+  };
+
   // ✅ Color Picker
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
@@ -106,6 +123,84 @@ export default function EditorPage() {
     }
   };
 
+  // Rectangle
+  const addRectangle = () => {
+    if (!canvas) return;
+
+    const rect = new fabric.Rect({
+      left: 100,
+      top: 100,
+      fill: "blue",
+      width: 100,
+      height: 100,
+    });
+
+    canvas.add(rect);
+    canvas.setActiveObject(rect);
+  };
+
+  // Circle
+  const addCircle = () => {
+    if (!canvas) return;
+    const circle = new fabric.Circle({
+      left: 150,
+      top: 150,
+      fill: "red",
+      radius: 50,
+    });
+
+    canvas.add(circle);
+    canvas.setActiveObject(circle);
+  };
+
+  // Undo Function
+  const undo = async () => {
+    if (!canvas || undoStackRef.current.length < 2) return;
+
+    isRestoring.current = true;
+
+    const newUndo = [...undoStackRef.current];
+    const current = newUndo.pop();
+    const prevState = newUndo[newUndo.length - 1];
+
+    undoStackRef.current = newUndo;
+    setUndoStack(newUndo);
+    setRedoStack((prev) => [...prev, current]);
+
+    try {
+      await canvas.loadFromJSON(prevState);
+      if (prevState.backgroundColor) {
+        canvas.backgroundColor = prevState.backgroundColor;
+      }
+      canvas.renderAll();
+    } finally {
+      // Must use a slight delay or wait for next tick sometimes, but try/finally is safest.
+      isRestoring.current = false;
+    }
+  };
+
+  // Redo Function
+  const redo = async () => {
+    if (!canvas || redoStack.length === 0) return;
+    
+    isRestoring.current = true;
+
+    const next = redoStack[redoStack.length - 1];
+    
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, next]);
+    
+    try {
+      await canvas.loadFromJSON(next);
+      if (next.backgroundColor) {
+        canvas.backgroundColor = next.backgroundColor;
+      }
+      canvas.renderAll();
+    } finally {
+      isRestoring.current = false;
+    }
+  };
+
   // ✅ Export Image
   const exportImage = () => {
     if (!canvas) return;
@@ -131,11 +226,52 @@ export default function EditorPage() {
           canvas.remove(activeObject);
         }
       }
+
+      // Keyboard Undo
+      if (e.ctrlKey && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+
+      // Keyboard Redo
+      if (e.ctrlKey && e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
     };
 
     window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [canvas, undoStack, redoStack]);
+  
+  // Initial State
+  useEffect(() => {
+    if (!canvas) return;
+
+    const initialState = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
+    undoStackRef.current = [initialState];
+    setUndoStack([initialState]);
   }, [canvas]);
+
+  // Undo Redo Function
+  useEffect(() => {
+    if (!canvas) return;
+
+    // Use a stable reference so the handler always calls the latest saveState
+    const handler = () => saveState();
+
+    canvas.on("object:added", handler);
+    canvas.on("object:modified", handler);
+    canvas.on("object:removed", handler);
+
+    return () => {
+      canvas.off("object:added", handler);
+      canvas.off("object:modified", handler);
+      canvas.off("object:removed", handler);
+    };
+  }, [canvas, saveState]);
 
   return (
     <div className="h-screen flex bg-gray-800 text-white">
@@ -160,12 +296,44 @@ export default function EditorPage() {
           Delete Selected
         </button>
 
+        
+        {/* Shapes as Rectangle and Circle */}
+        <button 
+          onClick={addRectangle}
+          className="block mb-4 bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium"
+        >
+          ▭ Add Rectangle
+        </button>
+
+        <button
+          onClick={addCircle}
+          className="block mb-4 bg-pink-500 hover:bg-pink-600 px-4 py-2 rounded-lg font-medium"
+        >
+          ⚪ Add Circle
+        </button>
+
+
         {/* Export */}
         <button
           onClick={exportImage}
           className="block mb-4 bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg font-medium"
         >
           Export Image
+        </button>
+
+        {/* Undo Redo Buttons*/}
+        <button
+          onClick={undo}
+          className="block mb-4 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg"
+        >
+          Undo
+        </button>
+
+        <button
+          onClick={redo}
+          className="block mb-4 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg"
+        >
+          Redo
         </button>
 
         {/* Upload Image */}
