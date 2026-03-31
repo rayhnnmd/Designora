@@ -216,6 +216,53 @@ export default function EditorPage() {
     link.download = "designora.png";
     link.click();
   };
+  // Save Design
+  const saveDesign = () => {
+    if (!canvas) return;
+    const json = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(json));
+
+    const link = document.createElement("a");
+    link.href = dataStr;
+    link.download = "designora-project.json";
+    link.click();
+  };
+
+  // Load Design
+  const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canvas) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        isRestoring.current = true;
+        const json = JSON.parse(event.target?.result as string);
+
+        await canvas.loadFromJSON(json);
+        if (json.backgroundColor) {
+          canvas.backgroundColor = json.backgroundColor;
+        }
+        canvas.renderAll();
+
+        const newState = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
+        undoStackRef.current = [newState];
+        setUndoStack([newState]);
+        setRedoStack([]);
+      } catch (err) {
+        console.error("Error loading design:", err);
+        alert("Failed to load design. Invalid JSON file.");
+      } finally {
+        isRestoring.current = false;
+        e.target.value = '';
+      }
+    };
+
+    reader.readAsText(file);
+  };
 
   // ✅ Keyboard Delete
   useEffect(() => {
@@ -320,6 +367,26 @@ export default function EditorPage() {
         >
           Export Image
         </button>
+
+        {/* Save/Load Design */}
+        <button
+          onClick={saveDesign}
+          className="block mb-4 bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded-lg font-medium w-full text-left">
+            💾 Save Design 
+          </button>
+
+          <label className="block mb-4">
+            <span className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium w-full text-left">
+              📂 Load Design
+            </span>
+
+            <input
+            type="file"
+            accept=".json"
+            onChange={loadDesign}
+            className="hidden"
+            />
+          </label>
 
         {/* Undo Redo Buttons*/}
         <button
