@@ -152,7 +152,7 @@ export default function EditorPage() {
   };
 
   // Undo Function
-  const undo = async () => {
+  const undo = useCallback (async () => {
     if (!canvas || undoStackRef.current.length < 2) return;
 
     isRestoring.current = true;
@@ -175,10 +175,10 @@ export default function EditorPage() {
       // Must use a slight delay or wait for next tick sometimes, but try/finally is safest.
       isRestoring.current = false;
     }
-  };
+  }, [canvas]);
 
   // Redo Function
-  const redo = async () => {
+  const redo = useCallback (async () => {
     if (!canvas || redoStack.length === 0) return;
     
     isRestoring.current = true;
@@ -197,7 +197,7 @@ export default function EditorPage() {
     } finally {
       isRestoring.current = false;
     }
-  };
+  }, [canvas, redoStack]);
 
   // ✅ Export Image
   const exportImage = () => {
@@ -278,8 +278,9 @@ export default function EditorPage() {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
+      const canvasWidth = canvas.width;
       const objWidth = activeObject.getScaledWidth() || activeObject.width || 0;
-      activeObject.set("left", (canvas.width || 800) - objWidth);
+      activeObject.set("left", canvasWidth - objWidth);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
@@ -301,8 +302,9 @@ export default function EditorPage() {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
+      const canvasHeight = canvas.height || 500;
       const objHeight = activeObject.getScaledHeight() || activeObject.height || 0;
-      activeObject.set("top", (canvas.height || 600) - objHeight);
+      activeObject.set("top", canvasHeight  - objHeight);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
@@ -327,22 +329,23 @@ export default function EditorPage() {
         const activeObject = canvas.getActiveObject();
         if (activeObject) {
           canvas.remove(activeObject);
+          saveState();
         }
       }
 
       // Keyboard Undo
-      if (e.ctrlKey && e.key === "z") {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
         undo();
       }
 
       // Keyboard Redo
-      if (e.ctrlKey && e.key === "y") {
+      if (e.ctrlKey || e.metaKey && e.key === "y") {
         e.preventDefault();
         redo();
       }
       // Alignment Shortcuts
-      if (e.ctrlKey) {
+      if (e.ctrlKey || e.metaKey) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
           alignLeft();
@@ -352,7 +355,7 @@ export default function EditorPage() {
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
           alignTop();
-        } else if (e.key === "ArrowDwon") {
+        } else if (e.key === "ArrowDwon" || e.keyCode === 40) {
           e.preventDefault();
           alignBottom();
         } else if (e.shiftKey && (e.key === "c" || e.key === "C")) {
@@ -366,7 +369,7 @@ export default function EditorPage() {
     return () => {
       window.removeEventListener("keydown", handleKey);
     };
-  }, [canvas, undoStack, redoStack, alignLeft, alignRight, alignTop, alignBottom, alignCenter]);
+  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, undo, redo, saveState]);
   
   // Initial State
   useEffect(() => {
@@ -485,30 +488,35 @@ export default function EditorPage() {
             <button
               onClick={alignLeft}
               className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              title="Ctrl + ArrowLeft"
             >
               Align Left
             </button>
             <button
               onClick={alignRight}
               className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              title="Ctrl + ArrowRight"
             >
               Align Right
             </button>
             <button
               onClick={alignTop}
               className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              title="Ctrl + ArrowUp"
             >
               Align Top
             </button>
             <button
               onClick={alignBottom}
               className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              title="Ctrl + ArrowDown"
             >
               Align Bottom
             </button>
             <button
               onClick={alignCenter}
               className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-sm col-span-2"
+              title="Ctrl + Shift + C"
             >
               Align Center
             </button>
