@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Canvas from "@/components/editor/Canvas";
 import { useCanvasStore } from "@/store/canvasStore";
 import * as fabric from "fabric";
-import { useState } from "react";
-import { useRef } from "react";
 
 export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
@@ -264,6 +262,64 @@ export default function EditorPage() {
     reader.readAsText(file);
   };
 
+  // Allignment Tools
+  const alignLeft = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      activeObject.set("left", 0);
+      activeObject.setCoords();
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  const alignRight = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      const objWidth = activeObject.getScaledWidth() || activeObject.width || 0;
+      activeObject.set("left", (canvas.width || 800) - objWidth);
+      activeObject.setCoords();
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  const alignTop = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      activeObject.set("top", 0);
+      activeObject.setCoords();
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  const alignBottom = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      const objHeight = activeObject.getScaledHeight() || activeObject.height || 0;
+      activeObject.set("top", (canvas.height || 600) - objHeight);
+      activeObject.setCoords();
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  const alignCenter = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      canvas.centerObject(activeObject);
+      activeObject.setCoords();
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
   // ✅ Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -285,13 +341,32 @@ export default function EditorPage() {
         e.preventDefault();
         redo();
       }
+      // Alignment Shortcuts
+      if (e.ctrlKey) {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          alignLeft();
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          alignRight();
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          alignTop();
+        } else if (e.key === "ArrowDwon") {
+          e.preventDefault();
+          alignBottom();
+        } else if (e.shiftKey && (e.key === "c" || e.key === "C")) {
+          e.preventDefault();
+          alignCenter();
+        }
+      }
     };
 
     window.addEventListener("keydown", handleKey);
     return () => {
       window.removeEventListener("keydown", handleKey);
     };
-  }, [canvas, undoStack, redoStack]);
+  }, [canvas, undoStack, redoStack, alignLeft, alignRight, alignTop, alignBottom, alignCenter]);
   
   // Initial State
   useEffect(() => {
@@ -402,6 +477,43 @@ export default function EditorPage() {
         >
           Redo
         </button>
+
+        {/* Alignment Tools*/}
+        <div className="mb-4">
+          <h3 className="font-bold mb-2">Alignment</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={alignLeft}
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+            >
+              Align Left
+            </button>
+            <button
+              onClick={alignRight}
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+            >
+              Align Right
+            </button>
+            <button
+              onClick={alignTop}
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+            >
+              Align Top
+            </button>
+            <button
+              onClick={alignBottom}
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+            >
+              Align Bottom
+            </button>
+            <button
+              onClick={alignCenter}
+              className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-sm col-span-2"
+            >
+              Align Center
+            </button>
+          </div>
+        </div>
 
         {/* Upload Image */}
         <label className="block mb-4">
