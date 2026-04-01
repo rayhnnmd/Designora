@@ -12,6 +12,8 @@ export default function EditorPage() {
   const [redoStack, setRedoStack] = useState<any[]>([]);
   const isRestoring = useRef(false);
   const undoStackRef = useRef<any[]>([]);
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  const GRID_SIZE = 20;
 
   // ✅ Add Text
   const addText = () => {
@@ -322,6 +324,40 @@ export default function EditorPage() {
     }
   }, [canvas]);
 
+  const alignMiddle = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      const canvasHeight = canvas.height || 500;
+      const objHeight = activeObject.getScaledHeight() || activeObject.height || 0;
+      activeObject.set("top", (canvasHeight - objHeight) / 2);
+      activeObject.setCoords();
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  // Layering Tools
+  const bringToFront = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      canvas.bringObjectToFront(activeObject);
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  const sendToBack = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject) {
+      canvas.sendObjectToBack(activeObject);
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
   // ✅ Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -344,7 +380,7 @@ export default function EditorPage() {
         e.preventDefault();
         redo();
       }
-      // Alignment Shortcuts
+      // Alignment & layering Shortcuts
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
@@ -358,9 +394,18 @@ export default function EditorPage() {
         } else if (e.key === "ArrowDwon" || e.keyCode === 40) {
           e.preventDefault();
           alignBottom();
+        } else if (e.key === "[") {
+          e.preventDefault();
+          sendToBack();
+        } else if (e.key === "]") {
+          e.preventDefault();
+          bringToFront();
         } else if (e.shiftKey && (e.key === "c" || e.key === "C")) {
           e.preventDefault();
           alignCenter();
+        } else if (e.shiftKey && (e.key === "m" || e.key === "M")) {
+          e.preventDefault();
+          alignMiddle();
         }
       }
     };
@@ -369,7 +414,7 @@ export default function EditorPage() {
     return () => {
       window.removeEventListener("keydown", handleKey);
     };
-  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, undo, redo, saveState]);
+  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState]);
   
   // Initial State
   useEffect(() => {
@@ -391,12 +436,60 @@ export default function EditorPage() {
     canvas.on("object:modified", handler);
     canvas.on("object:removed", handler);
 
+    // Snap to Grid Logic\
+    const handleMoving = (options: any) => {
+      if (snapToGrid &&  options.target) {
+        options.target.set({
+          left: Math.round(options.target.left / GRID_SIZE) * GRID_SIZE,
+          top: Math.round(options.target.top / GRID_SIZE) * GRID_SIZE,
+        });
+      }
+    };
+
+    canvas.on("object:moving", handleMoving);
+
     return () => {
       canvas.off("object:added", handler);
       canvas.off("object:modified", handler);
       canvas.off("object:removed", handler);
+      canvas.off("object:moving", handleMoving);
     };
-  }, [canvas, saveState]);
+  }, [canvas, saveState, snapToGrid]);
+
+  useEffect(() => {
+    if (!canvas) return;
+
+    if (snapToGrid) {
+      const gridCanvas = document.createElement("canvas");
+      gridCanvas.width = GRID_SIZE;
+      gridCanvas.height = GRID_SIZE;
+      const ctx = gridCanvas.getContext("2d");
+
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+        ctx.strokeStyle = "rgba(0,0,0,0.1)";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(GRID_SIZE, 0);
+        ctx.lineTo(GRID_SIZE, GRID_SIZE);
+        ctx.moveTo(0, GRID_SIZE);
+        ctx.lineTo(GRID_SIZE, GRID_SIZE);
+        ctx.stroke();
+      }
+
+      const pattern = new fabric.Pattern({
+        source: gridCanvas,
+        repeat: "repeat",
+      });
+
+      canvas.backgroundColor = pattern;
+      canvas.renderAll();
+    } else {
+      canvas.backgroundColor = "#ffffff";
+      canvas.renderAll();
+    }
+  }, [canvas, snapToGrid]);
 
   return (
     <div className="h-screen flex bg-gray-800 text-white">
@@ -481,44 +574,84 @@ export default function EditorPage() {
           Redo
         </button>
 
+        {/* Snap to Grid Toggle*/}
+        <div className="mb-4">
+          <label className="flex items-center cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={snapToGrid}
+                onChange={() => setSnapToGrid(!snapToGrid)}
+              />
+              <div className={`block w-14 h-8 rounded-full transition-colors ${snapToGrid ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${snapToGrid ? 'translate-x-6' : ''}`}></div>
+            </div>
+            <span className="ml-3 font-medium text-gray-200 group-hover:text-white transition-colors">
+              Snap to Grid
+            </span>
+          </label>
+        </div>
+
         {/* Alignment Tools*/}
         <div className="mb-4">
-          <h3 className="font-bold mb-2">Alignment</h3>
+          <h3 className="font-bold mb-2">Alignment & Layers</h3>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={alignLeft}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
               title="Ctrl + ArrowLeft"
             >
-              Align Left
+              Left
             </button>
             <button
               onClick={alignRight}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
               title="Ctrl + ArrowRight"
             >
-              Align Right
+              Right
             </button>
             <button
               onClick={alignTop}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
               title="Ctrl + ArrowUp"
             >
-              Align Top
+              Top
             </button>
             <button
               onClick={alignBottom}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-sm"
+              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
               title="Ctrl + ArrowDown"
             >
-              Align Bottom
+              Bottom
             </button>
             <button
               onClick={alignCenter}
-              className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-sm col-span-2"
+              className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-xs"
               title="Ctrl + Shift + C"
             >
-              Align Center
+              Center
+            </button>
+            <button
+              onClick={alignMiddle}
+              className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-xs"
+              title="Ctrl + Shift + M"
+            >
+              Middle
+            </button>
+            <button
+              onClick={bringToFront}
+              className="bg-emerald-600 hover:bg-emerald-700 px-2 py-2 rounded-lg font-medium text-xs"
+              title="Ctrl + ]"
+            >
+              Forward
+            </button>
+            <button
+              onClick={sendToBack}
+              className="bg-emerald-600 hover:bg-emerald-700 px-2 py-2 rounded-lg font-medium text-xs"
+              title="Ctrl + ["
+            >
+              Backward
             </button>
           </div>
         </div>
