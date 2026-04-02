@@ -14,8 +14,20 @@ export default function EditorPage() {
   const undoStackRef = useRef<any[]>([]);
   const [snapToGrid, setSnapToGrid] = useState(false);
   const GRID_SIZE = 20;
+  const [canvasObjects, setCanvasObjects] = useState<any[]>([]);
 
-  // ✅ Add Text
+  const updateLayers = useCallback(() => {
+    if (!canvas) return;
+    setCanvasObjects([...canvas.getObjects()]);
+  }, [canvas]);
+
+  useEffect(() => {
+    if (canvas) {
+      updateLayers();
+    }
+  }, [canvas, updateLayers]);
+
+  // Add Text
   const addText = () => {
     if (!canvas) return;
 
@@ -30,7 +42,7 @@ export default function EditorPage() {
     canvas.setActiveObject(text);
   };
 
-  // ✅ Delete Selected
+  // Delete Selected
   const deleteSelected = () => {
     if (!canvas) return;
 
@@ -40,7 +52,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Upload Image
+  // Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -81,7 +93,7 @@ export default function EditorPage() {
     setRedoStack([]);
   };
 
-  // ✅ Color Picker
+  // Color Picker
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -94,7 +106,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Font Size
+  // Font Size
   const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
     const size = parseInt(e.target.value);
     setFontSize(size);
@@ -110,7 +122,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Font Family
+  // Font Family
   const changeFontFamily = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (!canvas) return;
 
@@ -154,7 +166,7 @@ export default function EditorPage() {
   };
 
   // Undo Function
-  const undo = useCallback (async () => {
+  const undo = useCallback(async () => {
     if (!canvas || undoStackRef.current.length < 2) return;
 
     isRestoring.current = true;
@@ -173,14 +185,14 @@ export default function EditorPage() {
         canvas.backgroundColor = prevState.backgroundColor;
       }
       canvas.renderAll();
+      updateLayers();
     } finally {
-      // Must use a slight delay or wait for next tick sometimes, but try/finally is safest.
       isRestoring.current = false;
     }
-  }, [canvas]);
+  }, [canvas, updateLayers]);
 
   // Redo Function
-  const redo = useCallback (async () => {
+  const redo = useCallback(async () => {
     if (!canvas || redoStack.length === 0) return;
     
     isRestoring.current = true;
@@ -196,10 +208,11 @@ export default function EditorPage() {
         canvas.backgroundColor = next.backgroundColor;
       }
       canvas.renderAll();
+      updateLayers();
     } finally {
       isRestoring.current = false;
     }
-  }, [canvas, redoStack]);
+  }, [canvas, redoStack, updateLayers]);
 
   // ✅ Export Image
   const exportImage = () => {
@@ -216,22 +229,24 @@ export default function EditorPage() {
     link.download = "designora.png";
     link.click();
   };
-  // Save Design
+
+  // ✅ Save Design (JSON)
   const saveDesign = () => {
     if (!canvas) return;
+    
     const json = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(json));
-
+    
     const link = document.createElement("a");
     link.href = dataStr;
     link.download = "designora-project.json";
     link.click();
   };
 
-  // Load Design
+  // Load Design (JSON)
   const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
-
+    
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -241,13 +256,15 @@ export default function EditorPage() {
       try {
         isRestoring.current = true;
         const json = JSON.parse(event.target?.result as string);
-
+        
         await canvas.loadFromJSON(json);
         if (json.backgroundColor) {
           canvas.backgroundColor = json.backgroundColor;
         }
         canvas.renderAll();
-
+        updateLayers();
+        
+        // Reset undo/redo stacks to reflect the newly loaded state
         const newState = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
         undoStackRef.current = [newState];
         setUndoStack([newState]);
@@ -257,6 +274,7 @@ export default function EditorPage() {
         alert("Failed to load design. Invalid JSON file.");
       } finally {
         isRestoring.current = false;
+        // Clear input so same file can be loaded again if needed
         e.target.value = '';
       }
     };
@@ -264,7 +282,7 @@ export default function EditorPage() {
     reader.readAsText(file);
   };
 
-  // Allignment Tools
+  // Alignment Tools
   const alignLeft = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -304,9 +322,10 @@ export default function EditorPage() {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
+      // In Canvas.tsx the height is 500. Use actual canvas height properties.
       const canvasHeight = canvas.height || 500;
       const objHeight = activeObject.getScaledHeight() || activeObject.height || 0;
-      activeObject.set("top", canvasHeight  - objHeight);
+      activeObject.set("top", canvasHeight - objHeight);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
@@ -337,6 +356,47 @@ export default function EditorPage() {
     }
   }, [canvas]);
 
+  const selectLayer = (obj: any) => {
+    if (!canvas) return;
+    canvas.discardActiveObject();
+    canvas.setActiveObject(obj);
+    canvas.renderAll();
+  };
+
+  const moveLayerUp = (obj: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canvas) return;
+    canvas.bringObjectForward(obj);
+    canvas.renderAll();
+    canvas.fire("object:modified" as any);
+    updateLayers();
+  };
+
+  const moveLayerDown = (obj: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canvas) return;
+    canvas.sendObjectBackwards(obj);
+    canvas.renderAll();
+    canvas.fire("object:modified" as any);
+    updateLayers();
+  };
+
+  const deleteLayer = (obj: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canvas) return;
+    canvas.remove(obj);
+    canvas.renderAll();
+    canvas.fire("object:modified" as any);
+  };
+
+  const getLayerName = (obj: any) => {
+    if (obj.type === 'textbox' || obj.type === 'text') return `Text: ${obj.text?.substring(0, 10) || 'Text'}`;
+    if (obj.type === 'image') return 'Image';
+    if (obj.type === 'rect') return 'Rectangle';
+    if (obj.type === 'circle') return 'Circle';
+    return obj.type || 'Object';
+  };
+
   // Layering Tools
   const bringToFront = useCallback(() => {
     if (!canvas) return;
@@ -345,8 +405,9 @@ export default function EditorPage() {
       canvas.bringObjectToFront(activeObject);
       canvas.renderAll();
       canvas.fire("object:modified" as any);
+      updateLayers();
     }
-  }, [canvas]);
+  }, [canvas, updateLayers]);
 
   const sendToBack = useCallback(() => {
     if (!canvas) return;
@@ -355,12 +416,14 @@ export default function EditorPage() {
       canvas.sendObjectToBack(activeObject);
       canvas.renderAll();
       canvas.fire("object:modified" as any);
+      updateLayers();
     }
-  }, [canvas]);
+  }, [canvas, updateLayers]);
 
-  // ✅ Keyboard Delete
+  // Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      // Keyboard Delete
       if (e.key === "Delete" && canvas) {
         const activeObject = canvas.getActiveObject();
         if (activeObject) {
@@ -376,11 +439,12 @@ export default function EditorPage() {
       }
 
       // Keyboard Redo
-      if (e.ctrlKey || e.metaKey && e.key === "y") {
+      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
         e.preventDefault();
         redo();
       }
-      // Alignment & layering Shortcuts
+
+      // Alignment & Layering Shortcuts
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
@@ -391,7 +455,7 @@ export default function EditorPage() {
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
           alignTop();
-        } else if (e.key === "ArrowDwon" || e.keyCode === 40) {
+        } else if (e.key === "ArrowDown" || e.keyCode === 40) {
           e.preventDefault();
           alignBottom();
         } else if (e.key === "[") {
@@ -430,15 +494,25 @@ export default function EditorPage() {
     if (!canvas) return;
 
     // Use a stable reference so the handler always calls the latest saveState
-    const handler = () => saveState();
+    const handler = () => {
+      saveState();
+      updateLayers();
+    };
 
     canvas.on("object:added", handler);
     canvas.on("object:modified", handler);
     canvas.on("object:removed", handler);
 
-    // Snap to Grid Logic\
+    const selectionHandler = () => {
+      updateLayers(); // Force re-render to update active layer highlighted state
+    };
+    canvas.on("selection:created", selectionHandler);
+    canvas.on("selection:updated", selectionHandler);
+    canvas.on("selection:cleared", selectionHandler);
+
+    // Snap to Grid Logic
     const handleMoving = (options: any) => {
-      if (snapToGrid &&  options.target) {
+      if (snapToGrid && options.target) {
         options.target.set({
           left: Math.round(options.target.left / GRID_SIZE) * GRID_SIZE,
           top: Math.round(options.target.top / GRID_SIZE) * GRID_SIZE,
@@ -452,10 +526,14 @@ export default function EditorPage() {
       canvas.off("object:added", handler);
       canvas.off("object:modified", handler);
       canvas.off("object:removed", handler);
+      canvas.off("selection:created", selectionHandler);
+      canvas.off("selection:updated", selectionHandler);
+      canvas.off("selection:cleared", selectionHandler);
       canvas.off("object:moving", handleMoving);
     };
   }, [canvas, saveState, snapToGrid]);
 
+  // Visual Grid Pattern
   useEffect(() => {
     if (!canvas) return;
 
@@ -464,10 +542,12 @@ export default function EditorPage() {
       gridCanvas.width = GRID_SIZE;
       gridCanvas.height = GRID_SIZE;
       const ctx = gridCanvas.getContext("2d");
-
+      
       if (ctx) {
+        // Maintain white background
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+
         ctx.strokeStyle = "rgba(0,0,0,0.1)";
         ctx.lineWidth = 0.5;
         ctx.beginPath();
@@ -494,7 +574,7 @@ export default function EditorPage() {
   return (
     <div className="h-screen flex bg-gray-800 text-white">
       
-      {/* 🔥 Sidebar */}
+      {/* Sidebar */}
       <div className="w-64 bg-gray-900 p-4">
         <h2 className="text-xl font-bold mb-4">Tools</h2>
 
@@ -539,25 +619,26 @@ export default function EditorPage() {
           Export Image
         </button>
 
-        {/* Save/Load Design */}
+        {/* Save / Load Design */}
         <button
           onClick={saveDesign}
-          className="block mb-4 bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded-lg font-medium w-full text-left">
-            💾 Save Design 
-          </button>
+          className="block mb-4 bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded-lg font-medium w-full text-left"
+        >
+          💾 Save Design
+        </button>
 
-          <label className="block mb-4">
-            <span className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium w-full text-left">
-              📂 Load Design
-            </span>
+        <label className="block mb-4">
+          <span className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium w-full text-left">
+            📂 Load Design
+          </span>
 
-            <input
+          <input
             type="file"
             accept=".json"
             onChange={loadDesign}
             className="hidden"
-            />
-          </label>
+          />
+        </label>
 
         {/* Undo Redo Buttons*/}
         <button
@@ -574,13 +655,13 @@ export default function EditorPage() {
           Redo
         </button>
 
-        {/* Snap to Grid Toggle*/}
+        {/* Snap to Grid Toggle */}
         <div className="mb-4">
           <label className="flex items-center cursor-pointer group">
             <div className="relative">
-              <input
-                type="checkbox"
-                className="sr-only"
+              <input 
+                type="checkbox" 
+                className="sr-only" 
                 checked={snapToGrid}
                 onChange={() => setSnapToGrid(!snapToGrid)}
               />
@@ -593,7 +674,7 @@ export default function EditorPage() {
           </label>
         </div>
 
-        {/* Alignment Tools*/}
+        {/* Alignment Tools */}
         <div className="mb-4">
           <h3 className="font-bold mb-2">Alignment & Layers</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -712,9 +793,64 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* 🎨 Canvas */}
-      <div className="flex-1 flex items-center justify-center">
+      {/* Canvas */}
+      <div className="flex-1 flex items-center justify-center relative">
         <Canvas />
+      </div>
+
+      {/* Layer Panel */}
+      <div className="w-64 bg-gray-900 p-4 border-l border-gray-700 flex flex-col">
+        <h2 className="text-xl font-bold mb-4">Layers</h2>
+        
+        <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+          {canvasObjects.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No layers yet.</p>
+          ) : (
+            canvasObjects.slice().reverse().map((obj, index) => {
+              const isActive = canvas?.getActiveObjects().includes(obj);
+              
+              return (
+                <div
+                  key={index}
+                  onClick={() => selectLayer(obj)}
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    isActive ? "bg-indigo-600 text-white" : "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                  }`}
+                >
+                  <span className="text-sm font-medium truncate flex-1 mr-2">
+                    {getLayerName(obj)}
+                  </span>
+                  
+                  <div className="flex gap-1">
+                    <button
+                      onClick={(e) => moveLayerUp(obj, e)}
+                      className="p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white"
+                      title="Move Up"
+                      disabled={index === 0} // Top element
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={(e) => moveLayerDown(obj, e)}
+                      className="p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white"
+                      title="Move Down"
+                      disabled={index === canvasObjects.length - 1} // Bottom element
+                    >
+                      ↓
+                    </button>
+                    <button
+                      onClick={(e) => deleteLayer(obj, e)}
+                      className="p-1.5 hover:bg-red-500 hover:text-white rounded-md text-gray-400"
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
     </div>
