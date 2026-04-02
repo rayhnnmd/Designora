@@ -4,6 +4,102 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Canvas from "@/components/editor/Canvas";
 import { useCanvasStore } from "@/store/canvasStore";
 import * as fabric from "fabric";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function SortableLayer({ 
+  obj, 
+  index, 
+  canvas, 
+  getLayerName, 
+  selectLayer, 
+  moveLayerUp, 
+  moveLayerDown, 
+  deleteLayer 
+}: { 
+  obj: any; 
+  index: number; 
+  canvas: any; 
+  getLayerName: (obj: any) => string;
+  selectLayer: (obj: any) => void;
+  moveLayerUp: (obj: any, e: React.MouseEvent) => void;
+  moveLayerDown: (obj: any, e: React.MouseEvent) => void;
+  deleteLayer: (obj: any, e: React.MouseEvent) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: obj.toString() }); // using stringified object as ID for fabric objects for now
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const isActive = canvas?.getActiveObjects().includes(obj);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => selectLayer(obj)}
+      className={`flex items-center justify-between p-3 rounded-lg cursor-grab transition-colors active:cursor-grabbing ${
+        isActive ? "bg-indigo-600 text-white" : "bg-gray-800 hover:bg-gray-700 text-gray-300"
+      }`}
+    >
+      <span className="text-sm font-medium truncate flex-1 mr-2 pointer-events-none">
+        {getLayerName(obj)}
+      </span>
+      
+      <div className="flex gap-1">
+        <button
+          onClick={(e) => moveLayerUp(obj, e)}
+          className="p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white pointer-events-auto"
+          title="Move Up"
+        >
+          ↑
+        </button>
+        <button
+          onClick={(e) => moveLayerDown(obj, e)}
+          className="p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white pointer-events-auto"
+          title="Move Down"
+        >
+          ↓
+        </button>
+        <button
+          onClick={(e) => deleteLayer(obj, e)}
+          className="p-1.5 hover:bg-red-500 hover:text-white rounded-md text-gray-400 pointer-events-auto"
+          title="Delete"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
@@ -16,6 +112,17 @@ export default function EditorPage() {
   const GRID_SIZE = 20;
   const [canvasObjects, setCanvasObjects] = useState<any[]>([]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const updateLayers = useCallback(() => {
     if (!canvas) return;
     setCanvasObjects([...canvas.getObjects()]);
@@ -27,7 +134,7 @@ export default function EditorPage() {
     }
   }, [canvas, updateLayers]);
 
-  // Add Text
+  // ✅ Add Text
   const addText = () => {
     if (!canvas) return;
 
@@ -42,7 +149,7 @@ export default function EditorPage() {
     canvas.setActiveObject(text);
   };
 
-  // Delete Selected
+  // ✅ Delete Selected
   const deleteSelected = () => {
     if (!canvas) return;
 
@@ -52,7 +159,7 @@ export default function EditorPage() {
     }
   };
 
-  // Upload Image
+  // ✅ Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -93,7 +200,7 @@ export default function EditorPage() {
     setRedoStack([]);
   };
 
-  // Color Picker
+  // ✅ Color Picker
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -106,7 +213,7 @@ export default function EditorPage() {
     }
   };
 
-  // Font Size
+  // ✅ Font Size
   const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
     const size = parseInt(e.target.value);
     setFontSize(size);
@@ -122,7 +229,7 @@ export default function EditorPage() {
     }
   };
 
-  // Font Family
+  // ✅ Font Family
   const changeFontFamily = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (!canvas) return;
 
@@ -243,7 +350,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Load Design (JSON)
+  // ✅ Load Design (JSON)
   const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
     
@@ -282,7 +389,7 @@ export default function EditorPage() {
     reader.readAsText(file);
   };
 
-  // Alignment Tools
+  // ✅ Alignment Tools
   const alignLeft = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -397,6 +504,27 @@ export default function EditorPage() {
     return obj.type || 'Object';
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = canvasObjects.findIndex(obj => obj.toString() === active.id);
+      const newIndex = canvasObjects.findIndex(obj => obj.toString() === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1 && canvas) {
+        const objects = canvas.getObjects();
+        const obj = objects[oldIndex];
+        
+        // fabricjs reordering is a bit tricky
+        // we'll need to move it in the actual fabric objects array
+        canvas.moveObjectTo(obj, newIndex);
+        canvas.renderAll();
+        canvas.fire("object:modified" as any);
+        updateLayers();
+      }
+    }
+  };
+
   // Layering Tools
   const bringToFront = useCallback(() => {
     if (!canvas) return;
@@ -420,7 +548,7 @@ export default function EditorPage() {
     }
   }, [canvas, updateLayers]);
 
-  // Keyboard Delete
+  // ✅ Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       // Keyboard Delete
@@ -510,7 +638,7 @@ export default function EditorPage() {
     canvas.on("selection:updated", selectionHandler);
     canvas.on("selection:cleared", selectionHandler);
 
-    // Snap to Grid Logic
+    // ✅ Snap to Grid Logic
     const handleMoving = (options: any) => {
       if (snapToGrid && options.target) {
         options.target.set({
@@ -533,7 +661,7 @@ export default function EditorPage() {
     };
   }, [canvas, saveState, snapToGrid]);
 
-  // Visual Grid Pattern
+  // ✅ Visual Grid Pattern
   useEffect(() => {
     if (!canvas) return;
 
@@ -574,7 +702,7 @@ export default function EditorPage() {
   return (
     <div className="h-screen flex bg-gray-800 text-white">
       
-      {/* Sidebar */}
+      {/* 🔥 Sidebar */}
       <div className="w-64 bg-gray-900 p-4">
         <h2 className="text-xl font-bold mb-4">Tools</h2>
 
@@ -655,7 +783,7 @@ export default function EditorPage() {
           Redo
         </button>
 
-        {/* Snap to Grid Toggle */}
+        {/* ✅ Snap to Grid Toggle */}
         <div className="mb-4">
           <label className="flex items-center cursor-pointer group">
             <div className="relative">
@@ -674,7 +802,7 @@ export default function EditorPage() {
           </label>
         </div>
 
-        {/* Alignment Tools */}
+        {/* ✅ Alignment Tools */}
         <div className="mb-4">
           <h3 className="font-bold mb-2">Alignment & Layers</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -793,12 +921,12 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Canvas */}
+      {/* 🎨 Canvas */}
       <div className="flex-1 flex items-center justify-center relative">
         <Canvas />
       </div>
 
-      {/* Layer Panel */}
+      {/* 📚 Layer Panel */}
       <div className="w-64 bg-gray-900 p-4 border-l border-gray-700 flex flex-col">
         <h2 className="text-xl font-bold mb-4">Layers</h2>
         
@@ -806,49 +934,30 @@ export default function EditorPage() {
           {canvasObjects.length === 0 ? (
             <p className="text-sm text-gray-500 italic">No layers yet.</p>
           ) : (
-            canvasObjects.slice().reverse().map((obj, index) => {
-              const isActive = canvas?.getActiveObjects().includes(obj);
-              
-              return (
-                <div
-                  key={index}
-                  onClick={() => selectLayer(obj)}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                    isActive ? "bg-indigo-600 text-white" : "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                  }`}
-                >
-                  <span className="text-sm font-medium truncate flex-1 mr-2">
-                    {getLayerName(obj)}
-                  </span>
-                  
-                  <div className="flex gap-1">
-                    <button
-                      onClick={(e) => moveLayerUp(obj, e)}
-                      className="p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white"
-                      title="Move Up"
-                      disabled={index === 0} // Top element
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={(e) => moveLayerDown(obj, e)}
-                      className="p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white"
-                      title="Move Down"
-                      disabled={index === canvasObjects.length - 1} // Bottom element
-                    >
-                      ↓
-                    </button>
-                    <button
-                      onClick={(e) => deleteLayer(obj, e)}
-                      className="p-1.5 hover:bg-red-500 hover:text-white rounded-md text-gray-400"
-                      title="Delete"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              );
-            })
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext 
+                items={canvasObjects.map(obj => obj.toString())}
+                strategy={verticalListSortingStrategy}
+              >
+                {canvasObjects.slice().reverse().map((obj, index) => (
+                  <SortableLayer 
+                    key={obj.toString()}
+                    obj={obj}
+                    index={index}
+                    canvas={canvas}
+                    getLayerName={getLayerName}
+                    selectLayer={selectLayer}
+                    moveLayerUp={moveLayerUp}
+                    moveLayerDown={moveLayerDown}
+                    deleteLayer={deleteLayer}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       </div>
