@@ -132,6 +132,11 @@ export default function EditorPage() {
   const GRID_SIZE = 20;
   const [canvasObjects, setCanvasObjects] = useState<any[]>([]);
 
+  // Export Settings
+  const [exportFormat, setExportFormat] = useState<"png" | "jpeg">("png");
+  const [highQuality, setHighQuality] = useState(true);
+  const [transparentBg, setTransparentBg] = useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -355,16 +360,32 @@ export default function EditorPage() {
   // Export Image
   const exportImage = () => {
     if (!canvas) return;
+    const originalBg = canvas.backgroundColor;
+
+    if (transparentBg && exportFormat === "png") {
+      canvas.backgroundColor = "rgba(0,0,0,0)";
+    } else if (exportFormat === "jpeg" && (originalBg === null || (originalBg as any)?.source !== undefined)) {
+      canvas.backgroundColor = "#ffffff";
+    }
+
+    canvas.renderAll();
+
+    const multiplier = highQuality ? 2 : 1;
+
+    const qualityStr = exportFormat === "jpeg" ? (highQuality ? 1.0 : 0.6) : 1;
 
     const dataURL = canvas.toDataURL({
-      format: "png",
-      quality: 1,
-      multiplier: 2,
+      format: exportFormat,
+      quality: qualityStr as any,
+      multiplier: multiplier,
     });
+
+    canvas.backgroundColor = originalBg;
+    canvas.renderAll();
 
     const link = document.createElement("a");
     link.href = dataURL;
-    link.download = "designora.png";
+    link.download = `designora.${exportFormat}`;
     link.click();
   };
 
@@ -846,12 +867,59 @@ export default function EditorPage() {
 
 
         {/* Export */}
-        <button
-          onClick={exportImage}
-          className="block mb-4 bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg font-medium"
-        >
-          Export Image
-        </button>
+        <div className="mb-4 p-3 bg-gray-800 rounded-xl border border-gray-700">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Export Options
+          </h3>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              onClick={() => setExportFormat("png")}
+              className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "png" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            >
+              PNG
+            </button>
+            <button
+              onClick={() => setExportFormat("jpeg")}
+              className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "jpeg" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            >
+              JPEG
+            </button>
+          </div>
+
+          <label className="inline-flex items-center cursor-pointer mb-3 mt-2">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={highQuality}
+              onChange={() => setHighQuality(!highQuality)}
+            />
+              <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after;bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+              <span className="ml-3 text-xs font-medium text-gray-300">
+              High Quality (2x)
+            </span>
+          </label>
+
+          <label className={`inline-flex items-center cursor-pointer mb-5 ${exportFormat === "jpeg" ? "opacity-50 cursor-not-allowed" : ""}`} title={exportFormat === "jpeg" ? "Transparency not supported in JPG" : ""}>
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={transparentBg}
+              onChange={() => setTransparentBg(!transparentBg)}
+              disabled={exportFormat === "jpeg"}
+            />
+            <div className={`relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${transparentBg && exportFormat === "png" ? 'peer-checked:bg-yellow-500' : ''}`}></div>
+            <span className="ml-3 text-xs font-medium text-gray-300">
+              Transparent BG
+            </span>
+          </label>
+          <button
+            onClick={exportImage}
+            className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-2 rounded-lg font-bold transition-colors"
+          >
+            Export as {exportFormat.toUpperCase()}
+          </button>
+        </div>
 
         {/* Save / Load Design */}
         <button
@@ -890,19 +958,16 @@ export default function EditorPage() {
         </button>
 
         {/* Snap to Grid Toggle */}
-        <div className="mb-4">
-          <label className="flex items-center cursor-pointer group">
-            <div className="relative">
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={snapToGrid}
-                onChange={() => setSnapToGrid(!snapToGrid)}
-              />
-              <div className={`block w-14 h-8 rounded-full transition-colors ${snapToGrid ? 'bg-green-500' : 'bg-gray-600'}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${snapToGrid ? 'translate-x-6' : ''}`}></div>
-            </div>
-            <span className="ml-3 font-medium text-gray-200 group-hover:text-white transition-colors">
+        <div className="mb-4 mt-2">
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={snapToGrid}
+              onChange={() => setSnapToGrid(!snapToGrid)}
+            />
+            <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            <span className="ml-3 font-medium text-gray-200">
               Snap to Grid
             </span>
           </label>
