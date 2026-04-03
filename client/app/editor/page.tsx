@@ -119,6 +119,10 @@ function SortableLayer({
 
 export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
+  const width = useCanvasStore((state) => state.width);
+  const height = useCanvasStore((state) => state.height);
+  const setDimensions = useCanvasStore((state) => state.setDimensions);
+
   const [fontSize, setFontSize] = useState(24);
   const [undoStack, setUndoStack] = useState<any[]>([]);
   const [redoStack, setRedoStack] = useState<any[]>([]);
@@ -141,7 +145,13 @@ export default function EditorPage() {
 
   const updateLayers = useCallback(() => {
     if (!canvas) return;
-    setCanvasObjects([...canvas.getObjects()]);
+    const objects = canvas.getObjects();
+    objects.forEach((obj: any) => {
+      if (!obj.id) {
+        obj.set('id', Math.random().toString(36).substring(2, 9));
+      }
+    });
+    setCanvasObjects([...objects]);
   }, [canvas]);
 
   useEffect(() => {
@@ -159,7 +169,9 @@ export default function EditorPage() {
       top: 100,
       fontSize: fontSize,
       fill: "black",
-    });
+      id: Math.random().toString(36).substring(2, 9),
+    } as any);
+
 
     canvas.add(text);
     canvas.setActiveObject(text);
@@ -194,7 +206,8 @@ export default function EditorPage() {
         top: 100,
         scaleX: 0.5,
         scaleY: 0.5,
-      });
+        id: Math.random().toString(36).substring(2, 9),
+      } as any);  
 
       canvas.add(img);
       canvas.setActiveObject(img);
@@ -207,7 +220,7 @@ export default function EditorPage() {
   const saveState = () => {
     if (!canvas || isRestoring.current) return;
 
-    const json = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
+    const json = { ...(canvas as any).toJSON(['locked', 'id']), backgroundColor: canvas.backgroundColor };
 
     const newStack = [...undoStackRef.current, json];
     undoStackRef.current = newStack;
@@ -268,7 +281,8 @@ export default function EditorPage() {
       fill: "blue",
       width: 100,
       height: 100,
-    });
+      id: Math.random().toString(36).substring(2, 9),
+    } as any);
 
     canvas.add(rect);
     canvas.setActiveObject(rect);
@@ -282,7 +296,8 @@ export default function EditorPage() {
       top: 150,
       fill: "red",
       radius: 50,
-    });
+      id: Math.random().toString(36).substring(2, 9),
+    } as any);
 
     canvas.add(circle);
     canvas.setActiveObject(circle);
@@ -357,7 +372,7 @@ export default function EditorPage() {
   const saveDesign = () => {
     if (!canvas) return;
 
-    const json = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
+    const json = { ...(canvas as any).toJSON(['locked', 'id']), backgroundColor: canvas.backgroundColor };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(json));
 
     const link = document.createElement("a");
@@ -421,14 +436,14 @@ export default function EditorPage() {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
-      const canvasWidth = canvas.width;
-      const objWidth = activeObject.getScaledWidth() || activeObject.width || 0;
+      const canvasWidth = canvas.getWidth() || width;
+      const objWidth = activeObject.getScaledWidth() || 0;
       activeObject.set("left", canvasWidth - objWidth);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
     }
-  }, [canvas]);
+  }, [canvas, width]);
 
   const alignTop = useCallback(() => {
     if (!canvas) return;
@@ -445,39 +460,40 @@ export default function EditorPage() {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
-      // In Canvas.tsx the height is 500. Use actual canvas height properties.
-      const canvasHeight = canvas.height || 500;
-      const objHeight = activeObject.getScaledHeight() || activeObject.height || 0;
+      const canvasHeight = canvas.getHeight() || height;
+      const objHeight = activeObject.getScaledHeight() || 0;
       activeObject.set("top", canvasHeight - objHeight);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
     }
-  }, [canvas]);
+  }, [canvas, height]);
 
   const alignCenter = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
-      canvas.centerObject(activeObject);
+      const canvasWidth = canvas.getWidth() || width;
+      const objWidth = activeObject.getScaledWidth() || 0;
+      activeObject.set("left", (canvasWidth - objWidth) / 2);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
     }
-  }, [canvas]);
+  }, [canvas, width]);
 
   const alignMiddle = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
-      const canvasHeight = canvas.height || 500;
-      const objHeight = activeObject.getScaledHeight() || activeObject.height || 0;
+      const canvasHeight = canvas.getHeight() || height;
+      const objHeight = activeObject.getScaledHeight() || 0;
       activeObject.set("top", (canvasHeight - objHeight) / 2);
       activeObject.setCoords();
       canvas.renderAll();
       canvas.fire("object:modified" as any);
     }
-  }, [canvas]);
+  }, [canvas, height]);
 
   const selectLayer = (obj: any) => {
     if (!canvas) return;
@@ -545,8 +561,8 @@ export default function EditorPage() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = canvasObjects.findIndex(obj => obj.toString() === active.id);
-      const newIndex = canvasObjects.findIndex(obj => obj.toString() === over.id);
+      const oldIndex = canvasObjects.findIndex(obj => (obj.id || obj.toString()) === active.id);
+      const newIndex = canvasObjects.findIndex(obj => (obj.id || obj.toString()) === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1 && canvas) {
         const objects = canvas.getObjects();
@@ -740,8 +756,55 @@ export default function EditorPage() {
     <div className="h-screen flex bg-gray-800 text-white">
 
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 p-4">
+      <div className="w-64 bg-gray-900 p-4 overflow-y-auto custom-scrollbar">
         <h2 className="text-xl font-bold mb-4">Tools</h2>
+
+        {/* Canvas Size Control */}
+        <div className="mb-6 p-3 bg-gray-800 rounded-xl border border-gray-700">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            📏 Canvas Size
+          </h3>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              onClick={() => setDimensions(1080, 1080)}
+              className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 1080 && height === 1080 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            >
+              Instagram
+              <span className="block text-[10px] opacity-60">1080 x 1080</span>
+            </button>
+            <button
+              onClick={() => setDimensions(794, 1123)}
+              className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 794 && height === 1123 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            >
+              A4 Poster
+              <span className="block text-[10px] opacity-60">794 x 1123</span>
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Width</label>
+                <input 
+                  type="number"
+                  value={width}
+                  onChange={(e) => setDimensions(parseInt(e.target.value) || 0, height)}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Height</label>
+                <input
+                  type="number"
+                  value={height}
+                  onChange={(e) => setDimensions(width, parseInt(e.target.value) || 0)}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Add Text */}
         <button
@@ -977,12 +1040,12 @@ export default function EditorPage() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={canvasObjects.map(obj => obj.toString())}
+                items={canvasObjects.map(obj => (obj.id || obj.toString()))}
                 strategy={verticalListSortingStrategy}
               >
                 {canvasObjects.slice().reverse().map((obj, index) => (
                   <SortableLayer
-                    key={obj.toString()}
+                    key={obj.id || obj.toString()}
                     obj={obj}
                     index={index}
                     canvas={canvas}
