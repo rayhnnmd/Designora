@@ -51,8 +51,8 @@ function SortableLayer({
     transition,
     isDragging,
   } = useSortable({ 
-    id: obj.toString(),
-    disabled: obj.locked // Disable drag if locked
+    id: obj.id || obj.toString(),
+    disabled: obj.locked
   }); 
 
   const style = {
@@ -535,6 +535,8 @@ export default function EditorPage() {
     const isLocked = !obj.locked;
     obj.set({
       locked: isLocked,
+      selectable: !isLocked,
+      evented: !isLocked,
       lockMovementX: isLocked,
       lockMovementY: isLocked,
       lockScalingX: isLocked,
@@ -543,6 +545,10 @@ export default function EditorPage() {
       hasControls: !isLocked, // Hide controls when locked
       editable: !isLocked,    // Disable text editing if applicable
     });
+
+    if (isLocked) {
+      canvas.discardActiveObject();
+    }
 
     canvas.renderAll();
     canvas.fire("object:modified" as any);
