@@ -31,6 +31,7 @@ function SortableLayer({
   moveLayerUp,
   moveLayerDown,
   deleteLayer,
+  duplicateLayer,
   toggleLock
 }: {
   obj: any;
@@ -41,6 +42,7 @@ function SortableLayer({
   moveLayerUp: (obj: any, e: React.MouseEvent) => void;
   moveLayerDown: (obj: any, e: React.MouseEvent) => void;
   deleteLayer: (obj: any, e: React.MouseEvent) => void;
+  duplicateLayer: (obj: any, e: React.MouseEvent) => void;
   toggleLock: (obj: any, e: React.MouseEvent) => void;
 }) {
   const {
@@ -104,6 +106,14 @@ function SortableLayer({
           disabled={obj.locked}
         >
           ↓
+        </button>
+        <button 
+          onClick={(e) => duplicateLayer(obj, e)}
+          className={`p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white pointer-events-auto ${obj.locked ? 'opacity-30 cursor-not-allowed' : ''}`}
+          title="Duplicate"
+          disabled={obj.locked}
+        >
+          📄
         </button>
         <button
           onClick={(e) => deleteLayer(obj, e)}
@@ -191,6 +201,50 @@ export default function EditorPage() {
       canvas.remove(activeObject);
     }
   };
+  
+  // Duplicate Selected
+  const duplicateSelected = useCallback(async () => {
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    if (activeObject.type === "activeSelection") {
+      const selection = activeObject as any;
+      const clonedObjects: any[] = await Promise.all(
+        selection.getObjects().map((obj: any) => obj.clone())
+      );
+
+      canvas.discardActiveObject();
+
+      clonedObjects.forEach((clonedObj) => {
+        clonedObj.set({
+          left: (clonedObj.left || 0) + 20,
+          top: (clonedObj.top || 0) + 20,
+          id: Math.random().toString(36).substring(2, 9),
+        });
+        canvas.add(clonedObj);
+      });
+
+      const sel = new fabric.ActiveSelection(clonedObjects, {
+        canvas: canvas,
+      });
+      canvas.setActiveObject(sel);
+    } else {
+      const cloneObj = await activeObject.clone();
+      cloneObj.set({
+        left: (cloneObj.left || 0) + 20,
+        top: (cloneObj.top || + 20) + 20,
+        id: Math.random().toString(36).substring(2, 9),
+      });
+      canvas.add(cloneObj);
+      canvas.setActiveObject(cloneObj);
+    }
+
+    canvas.renderAll();
+    canvas.fire("object:modified" as any);
+    updateLayers();
+  }, [canvas, updateLayers]);
 
   // Upload Image
   const handleImageUpload = async (
@@ -548,6 +602,24 @@ export default function EditorPage() {
     canvas.renderAll();
     canvas.fire("object:modified" as any);
   };
+  const duplicateLayer = async (obj: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canvas) return;
+    
+    if (obj.locked) return;
+
+    const cloneObj = await obj.clone();
+    cloneObj.set({
+      left: (cloneObj.left || 0) + 20,
+      top: (cloneObj.top || 0) + 20,
+      id: Math.random().toString(36).substring(2, 9),
+    });
+    canvas.add(cloneObj);
+    canvas.setActiveObject(cloneObj);
+    canvas.renderAll();
+    canvas.fire("object:modified" as any);
+    updateLayers();
+  };
 
   const toggleLock = (obj: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -678,6 +750,9 @@ export default function EditorPage() {
         } else if (e.shiftKey && (e.key === "m" || e.key === "M")) {
           e.preventDefault();
           alignMiddle();
+        } else if (e.key === "d" || e.key === "D") {
+          e.preventDefault();
+          duplicateSelected();
         }
       }
     };
@@ -686,7 +761,7 @@ export default function EditorPage() {
     return () => {
       window.removeEventListener("keydown", handleKey);
     };
-  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState]);
+  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState, duplicateSelected]);
 
   // Initial State
   useEffect(() => {
@@ -839,6 +914,19 @@ export default function EditorPage() {
           className="block mb-4 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-medium"
         >
           Add Text
+        </button>
+
+        {/* Duplicate */}
+        <button
+          onClick={duplicateSelected}
+          className="block mb-4 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-medium w-full text-left flex items-center justify-between transition-colors border border-gray-600"
+        >
+          <div className="flex items-center gap-2">
+            Duplicate
+          </div>
+          <span className="text-[10px] opacity-40 bg-black/40 px-1.5 py-0.5 rounded font-mono">
+            Ctrl+D
+          </span>                                                                                                                         "
         </button>
 
         {/* Delete */}
@@ -1125,6 +1213,7 @@ export default function EditorPage() {
                     moveLayerUp={moveLayerUp}
                     moveLayerDown={moveLayerDown}
                     deleteLayer={deleteLayer}
+                    duplicateLayer={duplicateLayer}
                     toggleLock={toggleLock}
                   />
                 ))}
