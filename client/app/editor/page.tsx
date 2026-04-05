@@ -52,10 +52,10 @@ function SortableLayer({
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id: obj.id || obj.toString(),
-    disabled: obj.locked
-  }); 
+    disabled: obj.locked // Disable drag if locked
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,9 +84,8 @@ function SortableLayer({
       <div className="flex gap-1">
         <button
           onClick={(e) => toggleLock(obj, e)}
-          className={`p-1.5 rounded-md transition-colors pointer-events-auto ${
-            obj.locked ? "bg-amber-500 text-white" : "hover:bg-gray-600 text-gray-400 hover:text-white"
-          }`}
+          className={`p-1.5 rounded-md transition-colors pointer-events-auto ${obj.locked ? "bg-amber-500 text-white" : "hover:bg-gray-600 text-gray-400 hover:text-white"
+            }`}
           title={obj.locked ? "Unlock" : "Lock"}
         >
           {obj.locked ? "🔓" : "🔒"}
@@ -107,7 +106,7 @@ function SortableLayer({
         >
           ↓
         </button>
-        <button 
+        <button
           onClick={(e) => duplicateLayer(obj, e)}
           className={`p-1.5 hover:bg-gray-600 rounded-md text-gray-400 hover:text-white pointer-events-auto ${obj.locked ? 'opacity-30 cursor-not-allowed' : ''}`}
           title="Duplicate"
@@ -143,6 +142,15 @@ export default function EditorPage() {
   const [snapToGrid, setSnapToGrid] = useState(false);
   const GRID_SIZE = 20;
   const [canvasObjects, setCanvasObjects] = useState<any[]>([]);
+  const [activeObjectType, setActiveObjectType] = useState<string | null>(null);
+
+  const FONTS_LIST = [
+    "Inter", "Montserrat", "Playfair Display", "Bebas Neue", "Roboto", "Open Sans",
+    "Poppins", "Oswald", "Raleway", "Merriweather", "Dancing Script", "Cinzel",
+    "Abril Fatface", "Anton", "Righteous", "Kaushan Script", "Satisfy", "Courgette",
+    "Great Vibes", "Permanent Marker", "Shadows Into Light", "Orbitron", "Exo 2",
+    "Quicksand", "Kanit", "Lobster", "Pacifico"
+  ].sort();
 
   // Export Settings
   const [exportFormat, setExportFormat] = useState<"png" | "jpeg">("png");
@@ -163,6 +171,7 @@ export default function EditorPage() {
   const updateLayers = useCallback(() => {
     if (!canvas) return;
     const objects = canvas.getObjects();
+    // Ensure all objects have a unique ID for DnD list
     objects.forEach((obj: any) => {
       if (!obj.id) {
         obj.set('id', Math.random().toString(36).substring(2, 9));
@@ -189,7 +198,6 @@ export default function EditorPage() {
       id: Math.random().toString(36).substring(2, 9),
     } as any);
 
-
     canvas.add(text);
     canvas.setActiveObject(text);
   };
@@ -203,7 +211,7 @@ export default function EditorPage() {
       canvas.remove(activeObject);
     }
   };
-  
+
   // Duplicate Selected
   const duplicateSelected = useCallback(async () => {
     if (!canvas) return;
@@ -233,14 +241,14 @@ export default function EditorPage() {
       });
       canvas.setActiveObject(sel);
     } else {
-      const cloneObj = await activeObject.clone();
-      cloneObj.set({
-        left: (cloneObj.left || 0) + 20,
-        top: (cloneObj.top || + 20) + 20,
+      const clonedObj = await activeObject.clone();
+      clonedObj.set({
+        left: (clonedObj.left || 0) + 20,
+        top: (clonedObj.top || 0) + 20,
         id: Math.random().toString(36).substring(2, 9),
       });
-      canvas.add(cloneObj);
-      canvas.setActiveObject(cloneObj);
+      canvas.add(clonedObj);
+      canvas.setActiveObject(clonedObj);
     }
 
     canvas.renderAll();
@@ -268,7 +276,7 @@ export default function EditorPage() {
         scaleX: 0.5,
         scaleY: 0.5,
         id: Math.random().toString(36).substring(2, 9),
-      } as any);  
+      } as any);
 
       canvas.add(img);
       canvas.setActiveObject(img);
@@ -281,6 +289,7 @@ export default function EditorPage() {
   const saveState = () => {
     if (!canvas || isRestoring.current) return;
 
+    // Include custom properties in JSON for Persistence (locked, id)
     const json = { ...(canvas as any).toJSON(['locked', 'id']), backgroundColor: canvas.backgroundColor };
 
     const newStack = [...undoStackRef.current, json];
@@ -305,6 +314,8 @@ export default function EditorPage() {
 
   // Font Size
   const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canvas) return;
+    
     const size = parseInt(e.target.value);
     setFontSize(size);
 
@@ -320,17 +331,93 @@ export default function EditorPage() {
   };
 
   // Font Family
-  const changeFontFamily = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const changeFontFamily = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const font = e.target.value;
     if (!canvas) return;
 
     const activeObject = canvas.getActiveObject();
     if (!activeObject) return;
 
     if ("set" in activeObject && "fontFamily" in activeObject) {
-      activeObject.set("fontFamily", e.target.value);
-      canvas.renderAll();
+      if ((document as any).fonts) {
+        try {
+          await (document as any).fonts.load(`1em ${font}`);
+        } catch (err) {
+          console.warn("Font failed to load, applying anyway:", font);
+        }
+      }
+      activeObject.set("fontFamily", font);
+      canvas.requestRenderAll();
     }
   };
+
+  // Bold Toggle
+  const toggleBold = useCallback(() => {
+    if (!canvas) return;
+    const activeObjects = canvas.getActiveObjects();
+    if (activeObjects.length === 0) return;
+
+    activeObjects.forEach((obj: any) => {
+      if (obj.type === "textbox" || obj.type === "text") {
+        const isBold = obj.fontWeight === "bold";
+        obj.set("fontWeight", isBold ? "normal" : "bold");
+        obj.setCoords();
+      }
+    });
+
+    canvas.requestRenderAll();
+    canvas.fire("object:modified" as any);
+  }, [canvas]);
+
+  // Italic Toggle
+  const toggleItalic = useCallback(() => {
+    if (!canvas) return;
+    const activeObjects = canvas.getActiveObjects();
+    if (activeObjects.length === 0) return;
+
+    activeObjects.forEach((obj: any) => {
+      if (obj.type === "textbox" || obj.type === "text") {
+        const isItalic = obj.fontStyle === "italic";
+        obj.set("fontStyle", isItalic ? "normal" : "italic");
+        obj.setCoords();
+      }
+    });
+
+    canvas.requestRenderAll();
+    canvas.fire("object:modified" as any);
+  }, [canvas]);
+
+  // Shadow Toggle
+  const toggleShadow = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && (activeObject.type === "textbox" || activeObject.type === "text")) {
+      const hasShadow = !!(activeObject as any).shadow;
+      (activeObject as any).set("shadow", hasShadow ? null : new fabric.Shadow({
+        color: "rgba(0,0,0,0.5)",
+        blur: 10,
+        offsetX: 5,
+        offsetY: 5,
+      }));
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
+
+  // Stroke Toggle
+  const toggleStroke = useCallback(() => {
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && (activeObject.type === "textbox" || activeObject.type === "text")) {
+      const currentStroke = (activeObject as any).stroke;
+      (activeObject as any).set({
+        stroke: currentStroke ? null : "black",
+        strokeWidth: currentStroke ? 0 : 2
+      });
+      canvas.renderAll();
+      canvas.fire("object:modified" as any);
+    }
+  }, [canvas]);
 
   // Rectangle
   const addRectangle = () => {
@@ -416,18 +503,24 @@ export default function EditorPage() {
   // Export Image
   const exportImage = () => {
     if (!canvas) return;
+
+    // Save current values to restore later
     const originalBg = canvas.backgroundColor;
 
+    // Apply transparent background if applicable
     if (transparentBg && exportFormat === "png") {
       canvas.backgroundColor = "rgba(0,0,0,0)";
     } else if (exportFormat === "jpeg" && (originalBg === null || (originalBg as any)?.source !== undefined)) {
+      // JPEG doesn't support transparency, force white background
       canvas.backgroundColor = "#ffffff";
     }
 
     canvas.renderAll();
 
+    // High quality = 2x multiplier
     const multiplier = highQuality ? 2 : 1;
 
+    // For JPEG quality, set between 0 and 1
     const qualityStr = exportFormat === "jpeg" ? (highQuality ? 1.0 : 0.6) : 1;
 
     const dataURL = canvas.toDataURL({
@@ -436,6 +529,7 @@ export default function EditorPage() {
       multiplier: multiplier,
     });
 
+    // Restore original background
     canvas.backgroundColor = originalBg;
     canvas.renderAll();
 
@@ -445,7 +539,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Save Design
+  // Save Design (JSON)
   const saveDesign = () => {
     if (!canvas) return;
 
@@ -458,7 +552,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Load Design 
+  // Load Design (JSON)
   const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -503,6 +597,7 @@ export default function EditorPage() {
 
     const clampedZoom = Math.min(Math.max(newZoom, 0.1), 5);
 
+    // Zoom from center of the canvas viewport
     const center = (canvas as any).getVpCenter();
     canvas.zoomToPoint(new fabric.Point(center.x, center.y), clampedZoom);
     setZoom(clampedZoom);
@@ -511,7 +606,7 @@ export default function EditorPage() {
 
   const zoomIn = useCallback(() => handleZoom(zoom + 0.1), [handleZoom, zoom]);
   const zoomOut = useCallback(() => handleZoom(zoom - 0.1), [handleZoom, zoom]);
-  const resetZoom =useCallback(() => handleZoom(1), [handleZoom]);                                             
+  const resetZoom = useCallback(() => handleZoom(1), [handleZoom]);
 
   // Alignment Tools
   const alignLeft = useCallback(() => {
@@ -620,20 +715,21 @@ export default function EditorPage() {
     canvas.renderAll();
     canvas.fire("object:modified" as any);
   };
+
   const duplicateLayer = async (obj: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!canvas) return;
-    
+
     if (obj.locked) return;
 
-    const cloneObj = await obj.clone();
-    cloneObj.set({
-      left: (cloneObj.left || 0) + 20,
-      top: (cloneObj.top || 0) + 20,
+    const clonedObj = await obj.clone();
+    clonedObj.set({
+      left: (clonedObj.left || 0) + 20,
+      top: (clonedObj.top || 0) + 20,
       id: Math.random().toString(36).substring(2, 9),
     });
-    canvas.add(cloneObj);
-    canvas.setActiveObject(cloneObj);
+    canvas.add(clonedObj);
+    canvas.setActiveObject(clonedObj);
     canvas.renderAll();
     canvas.fire("object:modified" as any);
     updateLayers();
@@ -660,6 +756,7 @@ export default function EditorPage() {
     if (isLocked) {
       canvas.discardActiveObject();
     }
+
 
     canvas.renderAll();
     canvas.fire("object:modified" as any);
@@ -783,9 +880,16 @@ export default function EditorPage() {
         } else if (e.key === "0") {
           e.preventDefault();
           resetZoom();
+        } else if (e.key === "b" || e.key === "B") {
+          e.preventDefault();
+          toggleBold();
+        } else if (e.key === "i" || e.key === "I") {
+          e.preventDefault();
+          toggleItalic();
         }
       }
 
+      // Support zoom with just +/- even without Ctrl (if not in input)
       if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
         if (e.key === "+" || (e.key === "=" && !e.shiftKey)) {
           zoomIn();
@@ -799,7 +903,7 @@ export default function EditorPage() {
     return () => {
       window.removeEventListener("keydown", handleKey);
     };
-  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState, duplicateSelected, zoomIn, zoomOut, resetZoom]);
+  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState, duplicateSelected, zoomIn, zoomOut, resetZoom, toggleBold, toggleItalic]);
 
   // Initial State
   useEffect(() => {
@@ -825,7 +929,8 @@ export default function EditorPage() {
     canvas.on("object:removed", handler);
 
     const selectionHandler = () => {
-      updateLayers(); // Force re-render to update active layer highlighted state
+      updateLayers();
+      setActiveObjectType(canvas.getActiveObject()?.type || null);
     };
     canvas.on("selection:created", selectionHandler);
     canvas.on("selection:updated", selectionHandler);
@@ -843,6 +948,7 @@ export default function EditorPage() {
 
     canvas.on("object:moving", handleMoving);
 
+    // Wheel Zoom Logic
     const handleWheel = (opt: any) => {
       const e = opt.e;
       if (!e.ctrlKey && !e.metaKey) return;
@@ -931,14 +1037,14 @@ export default function EditorPage() {
               onClick={() => setDimensions(1080, 1080)}
               className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 1080 && height === 1080 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
             >
-              Instagram
+              📸 Instagram
               <span className="block text-[10px] opacity-60">1080 x 1080</span>
             </button>
             <button
               onClick={() => setDimensions(794, 1123)}
               className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 794 && height === 1123 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
             >
-              A4 Poster
+              📄 A4 Poster
               <span className="block text-[10px] opacity-60">794 x 1123</span>
             </button>
           </div>
@@ -947,7 +1053,7 @@ export default function EditorPage() {
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Width</label>
-                <input 
+                <input
                   type="number"
                   value={width}
                   onChange={(e) => setDimensions(parseInt(e.target.value) || 0, height)}
@@ -981,11 +1087,11 @@ export default function EditorPage() {
           className="block mb-4 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-medium w-full text-left flex items-center justify-between transition-colors border border-gray-600"
         >
           <div className="flex items-center gap-2">
-            Duplicate
+            📄 Duplicate
           </div>
           <span className="text-[10px] opacity-40 bg-black/40 px-1.5 py-0.5 rounded font-mono">
             Ctrl+D
-          </span>                                                                                                                         "
+          </span>
         </button>
 
         {/* Delete */}
@@ -1016,7 +1122,7 @@ export default function EditorPage() {
         {/* Export */}
         <div className="mb-4 p-3 bg-gray-800 rounded-xl border border-gray-700">
           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Export Options
+            📤 Export Options
           </h3>
 
           <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1030,7 +1136,7 @@ export default function EditorPage() {
               onClick={() => setExportFormat("jpeg")}
               className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "jpeg" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
             >
-              JPEG
+              JPG
             </button>
           </div>
 
@@ -1041,8 +1147,8 @@ export default function EditorPage() {
               checked={highQuality}
               onChange={() => setHighQuality(!highQuality)}
             />
-              <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after;bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-              <span className="ml-3 text-xs font-medium text-gray-300">
+            <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+            <span className="ml-3 text-xs font-medium text-gray-300">
               High Quality (2x)
             </span>
           </label>
@@ -1060,6 +1166,7 @@ export default function EditorPage() {
               Transparent BG
             </span>
           </label>
+
           <button
             onClick={exportImage}
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-2 rounded-lg font-bold transition-colors"
@@ -1228,23 +1335,63 @@ export default function EditorPage() {
           <p className="mb-2 font-medium">Font Family</p>
           <select
             onChange={changeFontFamily}
-            className="w-full p-2 bg-gray-700 rounded-lg"
+            className="w-full p-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:outline-none focus:border-indigo-500"
           >
-            <option value="Arial">Arial</option>
-            <option value="Courier New">Courier New</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Georgia">Georgia</option>
+            {FONTS_LIST.map((font) => (
+              <option key={font} value={font} style={{ fontFamily: font }}>
+                {font}
+              </option>
+            ))}
           </select>
         </div>
+
+        {/* Text Styling & Effects */}
+        {(activeObjectType === "textbox" || activeObjectType === "text") && (
+          <div className="mt-6 border-t border-gray-700 pt-4">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+              🎭 Text Styles & Effects
+            </h3>
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={toggleBold}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 p-2 rounded-lg font-bold border border-gray-600"
+                title="Ctrl + B"
+              >
+                B
+              </button>
+              <button
+                onClick={toggleItalic}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 p-2 italic rounded-lg border border-gray-600"
+                title="Ctrl + I"
+              >
+                I
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={toggleShadow}
+                className="w-full text-left bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-700 transition-colors"
+              >
+                <span className="text-lg">🌑</span> Toggle Shadow
+              </button>
+              <button
+                onClick={toggleStroke}
+                className="w-full text-left bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-700 transition-colors"
+              >
+                <span className="text-lg">🖋️</span> Toggle Outline
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Canvas */}
       <div className="flex-1 flex items-center justify-center relative bg-[#1a1a1a] overflow-hidden">
         <Canvas />
 
-        {/* Zoom controls */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-gray-900/90 backdrop-blur-md px-5 py-2.5 rounded-full border-gray-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
+        {/* Zoom Controls */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-gray-900/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-gray-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
           <button
             onClick={zoomOut}
             className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
@@ -1254,14 +1401,14 @@ export default function EditorPage() {
           </button>
 
           <div className="flex items-center gap-3 min-w-[150px]">
-            <input 
+            <input
               type="range"
               min="0.1"
               max="5"
               step="0.01"
               value={zoom}
               onChange={(e) => handleZoom(parseFloat(e.target.value))}
-              className="flex-1 h-1 bgb-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+              className="flex-1 h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
             />
             <span className="text-[10px] font-black text-gray-300 w-10 text-right">
               {Math.round(zoom * 100)}%
@@ -1275,8 +1422,8 @@ export default function EditorPage() {
           >
             +
           </button>
-          
-          <div className="w-[1px] h-4 bg-bg-gray-700/50 mx-1"></div>
+
+          <div className="w-[1px] h-4 bg-gray-700/50 mx-1"></div>
 
           <button
             onClick={resetZoom}

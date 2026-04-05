@@ -1,3 +1,6 @@
+/* Font Library*/
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&family=Montserrat:wght@400;700;900&family=Playfair+Display:wght@400;700;900&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;700;900&family=Lobster&family=Pacifico&family=Oswald:wght@400;700&family=Raleway:wght@400;700;900&family=Merriweather:wght@400;700&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Abril+Fatface&family=Anton&family=Righteous&family=Kaushan+Script&family=Satisfy&family=Courgette&family=Great+Vibes&family=Permanent+Marker&family=Shadows+Into+Light&family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;700;900&family=Quicksand:wght@400;700&family=Kanit:wght@400;700;900&display=swap');
+
 @import "tailwindcss";
 
 :root {
