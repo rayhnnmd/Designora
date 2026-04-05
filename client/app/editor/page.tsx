@@ -131,7 +131,9 @@ export default function EditorPage() {
   const canvas = useCanvasStore((state) => state.canvas);
   const width = useCanvasStore((state) => state.width);
   const height = useCanvasStore((state) => state.height);
+  const zoom = useCanvasStore((state) => state.zoom);
   const setDimensions = useCanvasStore((state) => state.setDimensions);
+  const setZoom = useCanvasStore((state) => state.setZoom);
 
   const [fontSize, setFontSize] = useState(24);
   const [undoStack, setUndoStack] = useState<any[]>([]);
@@ -495,6 +497,22 @@ export default function EditorPage() {
     reader.readAsText(file);
   };
 
+  // Zoom Tools
+  const handleZoom = useCallback((newZoom: number) => {
+    if (!canvas) return;
+
+    const clampedZoom = Math.min(Math.max(newZoom, 0.1), 5);
+
+    const center = (canvas as any).getVpCenter();
+    canvas.zoomToPoint(new fabric.Point(center.x, center.y), clampedZoom);
+    setZoom(clampedZoom);
+    canvas.renderAll();
+  }, [canvas, setZoom]);
+
+  const zoomIn = useCallback(() => handleZoom(zoom + 0.1), [handleZoom, zoom]);
+  const zoomOut = useCallback(() => handleZoom(zoom - 0.1), [handleZoom, zoom]);
+  const resetZoom =useCallback(() => handleZoom(1), [handleZoom]);                                             
+
   // Alignment Tools
   const alignLeft = useCallback(() => {
     if (!canvas) return;
@@ -754,6 +772,26 @@ export default function EditorPage() {
           e.preventDefault();
           duplicateSelected();
         }
+
+        // Zoom Shortcuts
+        if (e.key === "=" || e.key === "+") {
+          e.preventDefault();
+          zoomIn();
+        } else if (e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          zoomOut();
+        } else if (e.key === "0") {
+          e.preventDefault();
+          resetZoom();
+        }
+      }
+
+      if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        if (e.key === "+" || (e.key === "=" && !e.shiftKey)) {
+          zoomIn();
+        } else if (e.key === "-") {
+          zoomOut();
+        }
       }
     };
 
@@ -761,7 +799,7 @@ export default function EditorPage() {
     return () => {
       window.removeEventListener("keydown", handleKey);
     };
-  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState, duplicateSelected]);
+  }, [canvas, alignLeft, alignRight, alignTop, alignBottom, alignCenter, alignMiddle, bringToFront, sendToBack, undo, redo, saveState, duplicateSelected, zoomIn, zoomOut, resetZoom]);
 
   // Initial State
   useEffect(() => {
@@ -805,6 +843,26 @@ export default function EditorPage() {
 
     canvas.on("object:moving", handleMoving);
 
+    const handleWheel = (opt: any) => {
+      const e = opt.e;
+      if (!e.ctrlKey && !e.metaKey) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const delta = e.deltaY;
+      let newZoom = canvas.getZoom();
+      newZoom *= 0.999 ** delta;
+
+      const clampedZoom = Math.min(Math.max(newZoom, 0.1), 5);
+
+      const pointer = canvas.getScenePoint(e);
+      canvas.zoomToPoint(new fabric.Point(pointer.x, pointer.y), clampedZoom);
+      setZoom(clampedZoom);
+    };
+
+    canvas.on("mouse:wheel", handleWheel);
+
     return () => {
       canvas.off("object:added", handler);
       canvas.off("object:modified", handler);
@@ -813,8 +871,9 @@ export default function EditorPage() {
       canvas.off("selection:updated", selectionHandler);
       canvas.off("selection:cleared", selectionHandler);
       canvas.off("object:moving", handleMoving);
+      canvas.off("mouse:wheel", handleWheel);
     };
-  }, [canvas, saveState, snapToGrid]);
+  }, [canvas, saveState, snapToGrid, setZoom]);
 
   // Visual Grid Pattern
   useEffect(() => {
@@ -1181,8 +1240,51 @@ export default function EditorPage() {
       </div>
 
       {/* Canvas */}
-      <div className="flex-1 flex items-center justify-center relative">
+      <div className="flex-1 flex items-center justify-center relative bg-[#1a1a1a] overflow-hidden">
         <Canvas />
+
+        {/* Zoom controls */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-gray-900/90 backdrop-blur-md px-5 py-2.5 rounded-full border-gray-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
+          <button
+            onClick={zoomOut}
+            className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
+            title="Zoom Out (-)"
+          >
+            &minus;
+          </button>
+
+          <div className="flex items-center gap-3 min-w-[150px]">
+            <input 
+              type="range"
+              min="0.1"
+              max="5"
+              step="0.01"
+              value={zoom}
+              onChange={(e) => handleZoom(parseFloat(e.target.value))}
+              className="flex-1 h-1 bgb-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+            />
+            <span className="text-[10px] font-black text-gray-300 w-10 text-right">
+              {Math.round(zoom * 100)}%
+            </span>
+          </div>
+
+          <button
+            onClick={zoomIn}
+            className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
+            title="Zoom In (+)"
+          >
+            +
+          </button>
+          
+          <div className="w-[1px] h-4 bg-bg-gray-700/50 mx-1"></div>
+
+          <button
+            onClick={resetZoom}
+            className="text-[10px] font-black tracking-tighter text-indigo-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-indigo-600 transition-all shadow-sm"
+          >
+            100%
+          </button>
+        </div>
       </div>
 
       {/* Layer Panel */}
