@@ -344,7 +344,7 @@ export default function EditorPage() {
           await (document as any).fonts.load(`1em ${font}`);
         } catch (err) {
           console.warn("Font failed to load, applying anyway:", font);
-        }
+        }``
       }
       activeObject.set("fontFamily", font);
       canvas.requestRenderAll();

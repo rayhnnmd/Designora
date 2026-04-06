@@ -1,24 +1,60 @@
 /* Font Library*/
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&family=Montserrat:wght@400;700;900&family=Playfair+Display:wght@400;700;900&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;700;900&family=Lobster&family=Pacifico&family=Oswald:wght@400;700&family=Raleway:wght@400;700;900&family=Merriweather:wght@400;700&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Abril+Fatface&family=Anton&family=Righteous&family=Kaushan+Script&family=Satisfy&family=Courgette&family=Great+Vibes&family=Permanent+Marker&family=Shadows+Into+Light&family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;700;900&family=Quicksand:wght@400;700&family=Kanit:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Inter:wght@400;700&family=Montserrat:wght@400;700;900&family=Playfair+Display:wght@400;700;900&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;700;900&family=Lobster&family=Pacifico&family=Oswald:wght@400;700&family=Raleway:wght@400;700;900&family=Merriweather:wght@400;700&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Abril+Fatface&family=Anton&family=Righteous&family=Kaushan+Script&family=Satisfy&family=Courgette&family=Great+Vibes&family=Permanent+Marker&family=Shadows+Into+Light&family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;700;900&family=Quicksand:wght@400;700&family=Kanit:wght@400;700;900&display=swap');
 
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fff3fd;
+  --foreground: #3e2548;
+  --primary: #7f29cf;
+  --primary-container: #c185ff;
+  --on-primary: #fbefff;
+  --secondary: #006666;
+  --secondary-container: #8dedec;
+  --on-secondary: #bbfffe;
+  --tertiary: #a03649;
+  --tertiary-container: #ff909d;
+  --surface: #fff3fd;
+  --surface-container-low: #feebff;
+  --surface-container: #fae0ff;
+  --surface-container-high: #f8d8ff;
+  --surface-container-highest: #f5d1ff;
+  --on-surface: #3e2548;
+  --on-surface-variant: #6e5178;
+  --outline: #8a6c94;
+  --outline-variant: #c3a2cd;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary: var(--on-secondary);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-surface: var(--surface);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+
+  --font-headline: "Plus Jakarta Sans", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1b0425;
+    --foreground: #fff3fd;
   }
 }
 
