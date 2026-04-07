@@ -132,64 +132,6 @@ export default function Dashboard({ user }: { user: User }) {
             <div className="absolute right-0 top-0 h-full w-1/2 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1000')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
           </section>
 
-          <section className="mb-12">
-            <div className="flex justify-between items-end mb-6">
-              <div>
-                <h2 className="text-2xl font-bold font-headline">Recent designs</h2>
-                <p className="text-on-surface-variant text-sm">Pick up right where you left off</p>
-              </div>
-              <button className="text-primary font-bold text-sm hover:underline">View all</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              <div className="md:col-span-2 md:row-span-2 group">
-                <div className="h-full bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all flex flex-col border border-outline-variant/10">
-                  <div className="relative h-2/3 overflow-hidden">
-                    <img alt="Design thumbnail" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDC0pGU0TjYDg4NiwHEg8JGnm2r4iWcvQkIIV3OS5Sd642RRkn0KCo2x916ExJwKyyaS9Vh5KzZJZ7tcDe3OZRrgPtwN00Z9bbDvOz0eZLzcLALqOVtpPtUeRWbScXtm9d-IFHkrPUAfRTxBItmd83f_zRYAGGbn6HftTufwZT1moyOfFsAIXXmdoLzxrVzybiG3I5VFNJVsqQows1z93kAcNTC6Ezk8P71Y-j0jPdIoFyOu5m_oOS7182LYUbG05pKTH5gffLL-90" />
-                    <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors"></div>
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-primary">In Progress</div>
-                  </div>
-                  <div className="p-8 flex flex-col justify-between flex-1">
-                    <div>
-                      <h3 className="text-xl font-bold font-headline mb-2">Summer Brand Campaign 2024</h3>
-                      <p className="text-on-surface-variant text-sm mb-4">Modified 2 hours ago • Marketing</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-dim"></div>
-                        <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-primary-container"></div>
-                      </div>
-                      <span className="text-xs text-on-surface-variant font-medium">+2 collaborators</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {[
-                { title: "Q3 Review Deck", type: "Presentation", time: "1 day ago", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB7M_koVV2sAaMU8Vq9n-ybx6GoMnDhiciqBYCwhml2ArM13iJ7ZHNOQGelV5dcVaQlz6dC53dhHQ46judnChIOPzTm07G6gaMwl57ES6r4hyL7WN2zNlVZBl1E2d-YfXS5YNtY5JYdJJ0VtCrJNrjqhXy5EKo8H731_66JAbtNpQqe27arIK6TT3-F8dnBgvAW7DLkU-lVqadSe_reehTMOlYt_tr0yuwtzDUdFY55qpZ21lQ0BUhx4rcce3OaCBL5r8gBZrIl4uc" },
-                { title: "Instagram Stories Pack", type: "Social Media", time: "3 days ago", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAN4LE2lNZA2r1XbYOf6DkfAgjDetpAD5bKi_aTC9G2F1d5a7vm1FlpQ4ZxwCpyLXqfv5wUQLvIgcaxpM-sJF1yZCYhismMhq95ZoH0rAr1xnQ2eFau3GSsXvDvJ-gh-iIn8zDH-J97XTWCzj1DbJl_986ytcJ3ibcjQyACMgjYYPCrpMsOyetRzGyJrEfDLt6Db015aALxqpfDoHp5EW8eJV6DSKr6lXHfBh9MkgnbiztUTfHoODzE2wCoqOMOdr-unxR72B4YTpY" },
-                { title: "New Brand Identity", type: "Brand Hub", time: "Last week", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCrsRBUh4vGol710cqAxS5fgvY06aqsaUs1uJKddxA2UBks_IzGZtvkuMN4IphO9Ia7FY0dsE7gSn2Gh9xGpd9tXR6ZubmhHMvrislY7M_s3m-Jrfxs4suhvrXOh9M5PM6xp8hTZI37ZuFxRJC1_G27r2dfkoHiH38BB2yn014AZNjzm6gBC3h4ZBj8qfvkKSbMMSWYFGap5wK8b09ZHnwT9gStqjHqS8Kzxw9rUEsmv62p3v76vK52iYWgMzarsVqrrThqNYUJ5lk" },
-                { title: "Portfolio Website V2", type: "Apps", time: "2 weeks ago", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDvsAlaQ2geaXBJdHTIm2lIBgOBeolGaD9QeMrDZBdQ4iu9cYUV52nCkg99XXyFvGSdRtKiJDU6nlr8k9yOiDFTeYCLyvG7vMCE46dGgHsz_lBN6OqkNbZYDPZacicLC4oxtkfGMpzrgyH9GxD6bADUVmBHoaYiF-h3_N8pOUaftpD_fARhrDeXPPbTesO3eGXWNdy3k55XQ8I04ZzlRZZQ1VvzTl6MV-s_fJ9zumoW4PND2r3HW5cZOCcPKLTaL2VFONPpn0zoWcY" }
-              ].map((card, idx) => (
-                <div key={idx} className="group">
-                  <div className="h-full bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col border border-outline-variant/10">
-                    <div className="relative h-48 overflow-hidden">
-                      <img alt={card.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={card.img} />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="font-bold font-headline mb-1 truncate">{card.title}</h3>
-                      <p className="text-on-surface-variant text-xs mb-4">{card.time} • {card.type}</p>
-                      <Link href="/editor">
-                        <button className="w-full py-2 bg-surface-container-high text-on-surface text-xs font-bold rounded-lg hover:bg-primary hover:text-white transition-colors">
-                          Edit Design
-                        </button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
           <div className="fixed bottom-8 right-8 z-50">
             <Link href="/editor">
               <button className="bg-primary text-white p-5 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-3">

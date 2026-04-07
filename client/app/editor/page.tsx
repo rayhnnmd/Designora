@@ -4,6 +4,9 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Canvas from "@/components/editor/Canvas";
 import { useCanvasStore } from "@/store/canvasStore";
 import * as fabric from "fabric";
+import Link from "next/link";
+import { auth } from "@/lib/firebaseConfig";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import {
   DndContext,
   closestCenter,
@@ -138,6 +141,41 @@ export default function EditorPage() {
   const [undoStack, setUndoStack] = useState<any[]>([]);
   const [redoStack, setRedoStack] = useState<any[]>([]);
   const isRestoring = useRef(false);
+  
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Editor link copied to clipboard!");
+  };
   const undoStackRef = useRef<any[]>([]);
   const [snapToGrid, setSnapToGrid] = useState(false);
   const GRID_SIZE = 20;
@@ -186,7 +224,7 @@ export default function EditorPage() {
     }
   }, [canvas, updateLayers]);
 
-  // Add Text
+  // ✅ Add Text
   const addText = () => {
     if (!canvas) return;
 
@@ -202,7 +240,7 @@ export default function EditorPage() {
     canvas.setActiveObject(text);
   };
 
-  // Delete Selected
+  // ✅ Delete Selected
   const deleteSelected = () => {
     if (!canvas) return;
 
@@ -212,7 +250,7 @@ export default function EditorPage() {
     }
   };
 
-  // Duplicate Selected
+  // ✅ Duplicate Selected
   const duplicateSelected = useCallback(async () => {
     if (!canvas) return;
 
@@ -256,7 +294,7 @@ export default function EditorPage() {
     updateLayers();
   }, [canvas, updateLayers]);
 
-  // Upload Image
+  // ✅ Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -299,7 +337,7 @@ export default function EditorPage() {
     setRedoStack([]);
   };
 
-  // Color Picker
+  // ✅ Color Picker
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -312,10 +350,8 @@ export default function EditorPage() {
     }
   };
 
-  // Font Size
+  // ✅ Font Size
   const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!canvas) return;
-    
     const size = parseInt(e.target.value);
     setFontSize(size);
 
@@ -330,7 +366,7 @@ export default function EditorPage() {
     }
   };
 
-  // Font Family
+  // ✅ Font Family
   const changeFontFamily = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const font = e.target.value;
     if (!canvas) return;
@@ -339,19 +375,20 @@ export default function EditorPage() {
     if (!activeObject) return;
 
     if ("set" in activeObject && "fontFamily" in activeObject) {
+      // Ensure the font is loaded in the browser before Fabric.js renders
       if ((document as any).fonts) {
         try {
           await (document as any).fonts.load(`1em ${font}`);
         } catch (err) {
           console.warn("Font failed to load, applying anyway:", font);
-        }``
+        }
       }
       activeObject.set("fontFamily", font);
       canvas.requestRenderAll();
     }
   };
 
-  // Bold Toggle
+  // ✅ Bold Toggle
   const toggleBold = useCallback(() => {
     if (!canvas) return;
     const activeObjects = canvas.getActiveObjects();
@@ -369,7 +406,7 @@ export default function EditorPage() {
     canvas.fire("object:modified" as any);
   }, [canvas]);
 
-  // Italic Toggle
+  // ✅ Italic Toggle
   const toggleItalic = useCallback(() => {
     if (!canvas) return;
     const activeObjects = canvas.getActiveObjects();
@@ -387,7 +424,7 @@ export default function EditorPage() {
     canvas.fire("object:modified" as any);
   }, [canvas]);
 
-  // Shadow Toggle
+  // ✅ Shadow Toggle
   const toggleShadow = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -404,7 +441,7 @@ export default function EditorPage() {
     }
   }, [canvas]);
 
-  // Stroke Toggle
+  // ✅ Stroke Toggle
   const toggleStroke = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -500,7 +537,7 @@ export default function EditorPage() {
     }
   }, [canvas, redoStack, updateLayers]);
 
-  // Export Image
+  // ✅ Export Image
   const exportImage = () => {
     if (!canvas) return;
 
@@ -539,7 +576,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Save Design (JSON)
+  // ✅ Save Design (JSON)
   const saveDesign = () => {
     if (!canvas) return;
 
@@ -552,7 +589,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Load Design (JSON)
+  // ✅ Load Design (JSON)
   const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -591,7 +628,7 @@ export default function EditorPage() {
     reader.readAsText(file);
   };
 
-  // Zoom Tools
+  // ✅ Zoom Tools
   const handleZoom = useCallback((newZoom: number) => {
     if (!canvas) return;
 
@@ -608,7 +645,7 @@ export default function EditorPage() {
   const zoomOut = useCallback(() => handleZoom(zoom - 0.1), [handleZoom, zoom]);
   const resetZoom = useCallback(() => handleZoom(1), [handleZoom]);
 
-  // Alignment Tools
+  // ✅ Alignment Tools
   const alignLeft = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -815,7 +852,7 @@ export default function EditorPage() {
     }
   }, [canvas, updateLayers]);
 
-  // Keyboard Delete
+  // ✅ Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       // Keyboard Delete
@@ -936,7 +973,7 @@ export default function EditorPage() {
     canvas.on("selection:updated", selectionHandler);
     canvas.on("selection:cleared", selectionHandler);
 
-    // Snap to Grid Logic
+    // ✅ Snap to Grid Logic
     const handleMoving = (options: any) => {
       if (snapToGrid && options.target) {
         options.target.set({
@@ -948,7 +985,7 @@ export default function EditorPage() {
 
     canvas.on("object:moving", handleMoving);
 
-    // Wheel Zoom Logic
+    // ✅ Wheel Zoom Logic
     const handleWheel = (opt: any) => {
       const e = opt.e;
       if (!e.ctrlKey && !e.metaKey) return;
@@ -981,7 +1018,7 @@ export default function EditorPage() {
     };
   }, [canvas, saveState, snapToGrid, setZoom]);
 
-  // Visual Grid Pattern
+  // ✅ Visual Grid Pattern
   useEffect(() => {
     if (!canvas) return;
 
@@ -1020,13 +1057,55 @@ export default function EditorPage() {
   }, [canvas, snapToGrid]);
 
   return (
-    <div className="h-screen flex bg-gray-800 text-white">
+    <div className="bg-[#0e0e10] text-white font-body overflow-hidden h-screen flex flex-col">
+      {/* Header */}
+      <header className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-[#18181b] shrink-0 z-50">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-xl font-bold text-[#7f29cf] tracking-tight font-headline">Designora</Link>
+          <nav className="hidden md:flex gap-4 text-xs font-medium text-zinc-400">
+            <Link className="hover:text-white transition-colors" href="#">Templates</Link>
+            <Link className="hover:text-white transition-colors" href="#">Features</Link>
+            <Link className="hover:text-white transition-colors" href="#">Business</Link>
+          </nav>
+        </div>
+        <div className="flex items-center gap-3 relative" ref={dropdownRef}>
+          <button onClick={handleShare} className="bg-[#7f29cf] text-white px-4 py-1.5 rounded text-xs font-bold hover:opacity-90">Share</button>
+          <div 
+            className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 cursor-pointer border border-zinc-700 hover:border-zinc-500 transition-colors"
+            onClick={() => setProfileOpen(!profileOpen)}
+          >
+            <img alt="User" className="w-full h-full object-cover" src={user?.photoURL || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}/>
+          </div>
+          {profileOpen && user && (
+            <div className="absolute right-0 top-12 w-64 bg-zinc-900 border border-zinc-800 shadow-2xl rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-3 border-b border-zinc-800">
+                <div className="w-10 h-10 rounded-full overflow-hidden">
+                  <img src={user.photoURL || ""} className="w-full h-full object-cover" alt="Avatar"/>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold truncate max-w-[150px]">{user.displayName || "User"}</span>
+                  <span className="text-[10px] text-zinc-400 truncate max-w-[150px]">{user.email}</span>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors font-medium text-sm"
+              >
+                <span className="material-symbols-outlined text-sm">logout</span>
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
 
-      {/* Sidebar */}
+      <div className="flex flex-1 overflow-hidden bg-[#0e0e10]">
+
+      {/* 🔥 Sidebar */}
       <div className="w-64 bg-gray-900 p-4 overflow-y-auto custom-scrollbar">
         <h2 className="text-xl font-bold mb-4">Tools</h2>
 
-        {/* Canvas Size Control */}
+        {/* ✅ Canvas Size Control */}
         <div className="mb-6 p-3 bg-gray-800 rounded-xl border border-gray-700">
           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             📏 Canvas Size
@@ -1211,7 +1290,7 @@ export default function EditorPage() {
           Redo
         </button>
 
-        {/* Snap to Grid Toggle */}
+        {/* ✅ Snap to Grid Toggle */}
         <div className="mb-4 mt-2">
           <label className="inline-flex items-center cursor-pointer">
             <input
@@ -1227,7 +1306,7 @@ export default function EditorPage() {
           </label>
         </div>
 
-        {/* Alignment Tools */}
+        {/* ✅ Alignment Tools */}
         <div className="mb-4">
           <h3 className="font-bold mb-2">Alignment & Layers</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -1386,11 +1465,11 @@ export default function EditorPage() {
         )}
       </div>
 
-      {/* Canvas */}
+      {/* 🎨 Canvas */}
       <div className="flex-1 flex items-center justify-center relative bg-[#1a1a1a] overflow-hidden">
         <Canvas />
 
-        {/* Zoom Controls */}
+        {/* 🔍 Zoom Controls */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-gray-900/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-gray-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
           <button
             onClick={zoomOut}
@@ -1434,7 +1513,7 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Layer Panel */}
+      {/* 📚 Layer Panel */}
       <div className="w-64 bg-gray-900 p-4 border-l border-gray-700 flex flex-col">
         <h2 className="text-xl font-bold mb-4">Layers</h2>
 
@@ -1472,6 +1551,7 @@ export default function EditorPage() {
         </div>
       </div>
 
+      </div>
     </div>
   );
 }
