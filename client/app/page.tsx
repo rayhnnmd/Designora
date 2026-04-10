@@ -29,16 +29,24 @@ export default function Home() {
     return <Dashboard user={user} />;
   }
   return (
-    <div className="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container font-body min-h-screen">
+    <div className="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container font-body min-h-screen relative z-0">
+      {/* Doodle Background Overlay */}
+      <div
+        className="fixed inset-0 z-[-1] pointer-events-none opacity-60 dark:opacity-80 invert dark:invert-0"
+        style={{
+          backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')`,
+          backgroundRepeat: 'repeat',
+          backgroundPosition: 'top center',
+          backgroundSize: '400px'
+        }}
+      />
 
-      <nav className="w-full top-0 sticky z-50 bg-[#fff3fd] dark:bg-[#1a161b] flex justify-between items-center px-6 py-4">
+      <nav className="w-full top-0 sticky z-50 bg-transparent flex justify-between items-center px-6 py-4">
         <div className="flex items-center gap-8">
           <span className="text-2xl font-bold text-[#7D26CD] dark:text-[#c185ff] tracking-tight font-headline">Designora</span>
           <div className="hidden md:flex gap-6 items-center">
 
-            <Link className="font-headline font-semibold text-[#3e2548] dark:text-[#e9def1] hover:text-[#7D26CD] transition-colors duration-200" href="#features">Features</Link>
-            <Link className="font-headline font-semibold text-[#3e2548] dark:text-[#e9def1] hover:text-[#7D26CD] transition-colors duration-200" href="#business">Business</Link>
-            <Link className="font-headline font-semibold text-[#3e2548] dark:text-[#e9def1] hover:text-[#7D26CD] transition-colors duration-200" href="#education">Education</Link>
+
           </div>
         </div>
         <div className="flex items-center gap-4">

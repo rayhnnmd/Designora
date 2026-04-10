@@ -28,7 +28,17 @@ export default function Dashboard({ user }: { user: User }) {
   };
 
   return (
-    <div className="bg-surface text-on-surface font-body min-h-screen">
+    <div className="bg-surface text-on-surface font-body min-h-screen relative z-0">
+      {/* Doodle Background Overlay */}
+      <div
+        className="fixed inset-0 z-[-1] pointer-events-none opacity-60 dark:opacity-80 invert dark:invert-0"
+        style={{
+          backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')`,
+          backgroundRepeat: 'repeat',
+          backgroundPosition: 'top center',
+          backgroundSize: '400px'
+        }}
+      />
       <aside className="h-screen w-64 fixed left-0 top-0 bg-surface-container-low flex flex-col p-4 gap-2 z-50">
         <div className="mb-8 px-4 flex flex-col gap-1">
           <span className="text-xl font-black text-on-surface tracking-tight font-headline">Designora</span>
@@ -47,23 +57,10 @@ export default function Dashboard({ user }: { user: User }) {
             <span className="material-symbols-outlined">home</span>
             <span className="font-medium">Home</span>
           </Link>
-          <Link href="#" className="flex items-center gap-3 text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg">
-            <span className="material-symbols-outlined">folder_open</span>
-            <span className="font-medium">Projects</span>
-          </Link>
-          <Link href="#" className="flex items-center gap-3 text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg">
-            <span className="material-symbols-outlined">auto_awesome</span>
-            <span className="font-medium">Brand Hub</span>
-          </Link>
+
         </nav>
         <div className="pt-4 border-t border-outline-variant/10 flex flex-col gap-1">
-          <button className="mb-4 bg-secondary-container text-on-secondary-container font-semibold py-2 px-4 rounded-full text-sm hover:opacity-90 transition-opacity">
-            Invite Members
-          </button>
-          <Link href="#" className="flex items-center gap-3 text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg">
-            <span className="material-symbols-outlined">delete</span>
-            <span className="font-medium">Trash</span>
-          </Link>
+
           <Link href="#" className="flex items-center gap-3 text-on-surface px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg">
             <span className="material-symbols-outlined">settings</span>
             <span className="font-medium">Settings</span>
@@ -71,25 +68,20 @@ export default function Dashboard({ user }: { user: User }) {
         </div>
       </aside>
 
-      <main className="ml-64 min-h-screen bg-surface">
-        <header className="sticky top-0 w-full z-40 px-8 py-4 flex justify-between items-center bg-surface-container-low/80 backdrop-blur-md">
-          <div className="flex-1 max-w-2xl relative group">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
-            <input className="w-full bg-surface-container-highest/40 border-none rounded-full py-3 pl-12 pr-6 focus:ring-2 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60 transition-all font-body text-sm" placeholder="Search your content or templates" type="text" />
-          </div>
+      <main className="ml-64 min-h-screen">
+        <header className="sticky top-0 w-full z-40 px-8 py-4 flex justify-between items-center bg-transparent">
+          <div></div>
           <div className="flex items-center gap-4 ml-6 relative" ref={dropdownRef}>
-            <button className="p-2 text-on-surface hover:bg-surface-container-high rounded-full transition-colors">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            
-            <div 
+
+
+            <div
               className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container cursor-pointer hover:scale-105 transition-transform"
               onClick={() => setProfileOpen(!profileOpen)}
             >
-              <img 
-                alt="User profile" 
-                className="w-full h-full object-cover" 
-                src={user.photoURL || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"} 
+              <img
+                alt="User profile"
+                className="w-full h-full object-cover"
+                src={user.photoURL || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
               />
             </div>
 
@@ -97,14 +89,14 @@ export default function Dashboard({ user }: { user: User }) {
               <div className="absolute right-0 top-14 w-64 bg-surface-container-lowest border border-outline-variant shadow-2xl rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="flex items-center gap-3 pb-3 border-b border-outline-variant/30">
                   <div className="w-10 h-10 rounded-full overflow-hidden">
-                    <img src={user.photoURL || ""} className="w-full h-full object-cover" alt="Avatar"/>
+                    <img src={user.photoURL || ""} className="w-full h-full object-cover" alt="Avatar" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold truncate max-w-[150px]">{user.displayName || "User"}</span>
                     <span className="text-[10px] text-on-surface-variant truncate max-w-[150px]">{user.email}</span>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-3 py-2 text-error hover:bg-error/10 rounded-lg transition-colors font-medium text-sm"
                 >
@@ -117,7 +109,7 @@ export default function Dashboard({ user }: { user: User }) {
         </header>
 
         <div className="px-8 pb-12">
-           <section className="mt-4 mb-10 rounded-[2rem] overflow-hidden relative min-h-[320px] flex items-center p-12 bg-gradient-to-br from-primary to-primary-container">
+          <section className="mt-4 mb-10 rounded-[2rem] overflow-hidden relative min-h-[320px] flex items-center p-12 bg-gradient-to-br from-primary to-primary-container">
             <div className="relative z-10 max-w-xl">
               <h1 className="text-5xl font-extrabold text-on-primary font-headline leading-tight tracking-tight mb-4 text-white">What will you design today?</h1>
               <p className="text-on-primary/80 text-lg font-medium mb-8 text-white/90">Unlock your creative potential with our intuitive tools and curated templates.</p>

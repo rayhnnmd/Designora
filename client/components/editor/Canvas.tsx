@@ -22,13 +22,13 @@ export default function Canvas() {
 
     // Default text
     const text = new fabric.Textbox("Hello Designora 🎨", {
-      left: 100,
-      top: 100,
       fontSize: 24,
       width: 300,
+      textAlign: "center",
     });
 
     canvas.add(text);
+    canvas.centerObject(text);
 
     return () => {
       canvas.dispose();

@@ -141,17 +141,22 @@ export default function EditorPage() {
   const [undoStack, setUndoStack] = useState<any[]>([]);
   const [redoStack, setRedoStack] = useState<any[]>([]);
   const isRestoring = useRef(false);
-  
+
   // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Lock body scroll unconditionally because of third party portal injections (fabric area / dnd regions)
+    document.body.style.overflow = "hidden";
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
-    return () => unsubscribe();
+    return () => {
+      document.body.style.overflow = "";
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -224,23 +229,22 @@ export default function EditorPage() {
     }
   }, [canvas, updateLayers]);
 
-  // ✅ Add Text
+  // Add Text
   const addText = () => {
     if (!canvas) return;
 
     const text = new fabric.Textbox("New Text", {
-      left: 100,
-      top: 100,
       fontSize: fontSize,
       fill: "black",
       id: Math.random().toString(36).substring(2, 9),
     } as any);
 
     canvas.add(text);
+    canvas.centerObject(text);
     canvas.setActiveObject(text);
   };
 
-  // ✅ Delete Selected
+  // Delete Selected
   const deleteSelected = () => {
     if (!canvas) return;
 
@@ -250,7 +254,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Duplicate Selected
+  // Duplicate Selected
   const duplicateSelected = useCallback(async () => {
     if (!canvas) return;
 
@@ -294,7 +298,7 @@ export default function EditorPage() {
     updateLayers();
   }, [canvas, updateLayers]);
 
-  // ✅ Upload Image
+  // Upload Image
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -309,14 +313,13 @@ export default function EditorPage() {
       const img = await fabric.Image.fromURL(reader.result as string);
 
       img.set({
-        left: 100,
-        top: 100,
         scaleX: 0.5,
         scaleY: 0.5,
         id: Math.random().toString(36).substring(2, 9),
       } as any);
 
       canvas.add(img);
+      canvas.centerObject(img);
       canvas.setActiveObject(img);
     };
 
@@ -337,7 +340,7 @@ export default function EditorPage() {
     setRedoStack([]);
   };
 
-  // ✅ Color Picker
+  // Color Picker
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -350,7 +353,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Font Size
+  // Font Size
   const changeFontSize = (e: React.ChangeEvent<HTMLInputElement>) => {
     const size = parseInt(e.target.value);
     setFontSize(size);
@@ -366,7 +369,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Font Family
+  // Font Family
   const changeFontFamily = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const font = e.target.value;
     if (!canvas) return;
@@ -388,7 +391,7 @@ export default function EditorPage() {
     }
   };
 
-  // ✅ Bold Toggle
+  // Bold Toggle
   const toggleBold = useCallback(() => {
     if (!canvas) return;
     const activeObjects = canvas.getActiveObjects();
@@ -406,7 +409,7 @@ export default function EditorPage() {
     canvas.fire("object:modified" as any);
   }, [canvas]);
 
-  // ✅ Italic Toggle
+  // Italic Toggle
   const toggleItalic = useCallback(() => {
     if (!canvas) return;
     const activeObjects = canvas.getActiveObjects();
@@ -424,7 +427,7 @@ export default function EditorPage() {
     canvas.fire("object:modified" as any);
   }, [canvas]);
 
-  // ✅ Shadow Toggle
+  // Shadow Toggle
   const toggleShadow = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -441,7 +444,7 @@ export default function EditorPage() {
     }
   }, [canvas]);
 
-  // ✅ Stroke Toggle
+  // Stroke Toggle
   const toggleStroke = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -461,8 +464,6 @@ export default function EditorPage() {
     if (!canvas) return;
 
     const rect = new fabric.Rect({
-      left: 100,
-      top: 100,
       fill: "blue",
       width: 100,
       height: 100,
@@ -470,6 +471,7 @@ export default function EditorPage() {
     } as any);
 
     canvas.add(rect);
+    canvas.centerObject(rect);
     canvas.setActiveObject(rect);
   };
 
@@ -477,14 +479,13 @@ export default function EditorPage() {
   const addCircle = () => {
     if (!canvas) return;
     const circle = new fabric.Circle({
-      left: 150,
-      top: 150,
       fill: "red",
       radius: 50,
       id: Math.random().toString(36).substring(2, 9),
     } as any);
 
     canvas.add(circle);
+    canvas.centerObject(circle);
     canvas.setActiveObject(circle);
   };
 
@@ -537,7 +538,7 @@ export default function EditorPage() {
     }
   }, [canvas, redoStack, updateLayers]);
 
-  // ✅ Export Image
+  // Export Image
   const exportImage = () => {
     if (!canvas) return;
 
@@ -576,7 +577,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // ✅ Save Design (JSON)
+  // Save Design (JSON)
   const saveDesign = () => {
     if (!canvas) return;
 
@@ -589,7 +590,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // ✅ Load Design (JSON)
+  // Load Design (JSON)
   const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -628,7 +629,7 @@ export default function EditorPage() {
     reader.readAsText(file);
   };
 
-  // ✅ Zoom Tools
+  // Zoom Tools
   const handleZoom = useCallback((newZoom: number) => {
     if (!canvas) return;
 
@@ -645,7 +646,7 @@ export default function EditorPage() {
   const zoomOut = useCallback(() => handleZoom(zoom - 0.1), [handleZoom, zoom]);
   const resetZoom = useCallback(() => handleZoom(1), [handleZoom]);
 
-  // ✅ Alignment Tools
+  // Alignment Tools
   const alignLeft = useCallback(() => {
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -852,7 +853,7 @@ export default function EditorPage() {
     }
   }, [canvas, updateLayers]);
 
-  // ✅ Keyboard Delete
+  // Keyboard Delete
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       // Keyboard Delete
@@ -973,7 +974,7 @@ export default function EditorPage() {
     canvas.on("selection:updated", selectionHandler);
     canvas.on("selection:cleared", selectionHandler);
 
-    // ✅ Snap to Grid Logic
+    // Snap to Grid Logic
     const handleMoving = (options: any) => {
       if (snapToGrid && options.target) {
         options.target.set({
@@ -985,7 +986,7 @@ export default function EditorPage() {
 
     canvas.on("object:moving", handleMoving);
 
-    // ✅ Wheel Zoom Logic
+    // Wheel Zoom Logic
     const handleWheel = (opt: any) => {
       const e = opt.e;
       if (!e.ctrlKey && !e.metaKey) return;
@@ -1018,7 +1019,7 @@ export default function EditorPage() {
     };
   }, [canvas, saveState, snapToGrid, setZoom]);
 
-  // ✅ Visual Grid Pattern
+  // Visual Grid Pattern
   useEffect(() => {
     if (!canvas) return;
 
@@ -1062,32 +1063,28 @@ export default function EditorPage() {
       <header className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-[#18181b] shrink-0 z-50">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-xl font-bold text-[#7f29cf] tracking-tight font-headline">Designora</Link>
-          <nav className="hidden md:flex gap-4 text-xs font-medium text-zinc-400">
-            <Link className="hover:text-white transition-colors" href="#">Templates</Link>
-            <Link className="hover:text-white transition-colors" href="#">Features</Link>
-            <Link className="hover:text-white transition-colors" href="#">Business</Link>
-          </nav>
+
         </div>
         <div className="flex items-center gap-3 relative" ref={dropdownRef}>
           <button onClick={handleShare} className="bg-[#7f29cf] text-white px-4 py-1.5 rounded text-xs font-bold hover:opacity-90">Share</button>
-          <div 
+          <div
             className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 cursor-pointer border border-zinc-700 hover:border-zinc-500 transition-colors"
             onClick={() => setProfileOpen(!profileOpen)}
           >
-            <img alt="User" className="w-full h-full object-cover" src={user?.photoURL || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}/>
+            <img alt="User" className="w-full h-full object-cover" src={user?.photoURL || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"} />
           </div>
           {profileOpen && user && (
             <div className="absolute right-0 top-12 w-64 bg-zinc-900 border border-zinc-800 shadow-2xl rounded-xl p-4 flex flex-col gap-3">
               <div className="flex items-center gap-3 pb-3 border-b border-zinc-800">
                 <div className="w-10 h-10 rounded-full overflow-hidden">
-                  <img src={user.photoURL || ""} className="w-full h-full object-cover" alt="Avatar"/>
+                  <img src={user.photoURL || ""} className="w-full h-full object-cover" alt="Avatar" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-bold truncate max-w-[150px]">{user.displayName || "User"}</span>
                   <span className="text-[10px] text-zinc-400 truncate max-w-[150px]">{user.email}</span>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors font-medium text-sm"
               >
@@ -1099,457 +1096,457 @@ export default function EditorPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden bg-[#0e0e10]">
+      <div className="flex flex-1 overflow-hidden bg-[#0e0e10] min-h-0">
 
-      {/* 🔥 Sidebar */}
-      <div className="w-64 bg-gray-900 p-4 overflow-y-auto custom-scrollbar">
-        <h2 className="text-xl font-bold mb-4">Tools</h2>
+        {/* Sidebar */}
+        <div className="w-64 bg-gray-900 p-4 overflow-y-auto custom-scrollbar">
+          <h2 className="text-xl font-bold mb-4">Tools</h2>
 
-        {/* ✅ Canvas Size Control */}
-        <div className="mb-6 p-3 bg-gray-800 rounded-xl border border-gray-700">
-          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            📏 Canvas Size
-          </h3>
-
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <button
-              onClick={() => setDimensions(1080, 1080)}
-              className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 1080 && height === 1080 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-            >
-              📸 Instagram
-              <span className="block text-[10px] opacity-60">1080 x 1080</span>
-            </button>
-            <button
-              onClick={() => setDimensions(794, 1123)}
-              className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 794 && height === 1123 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-            >
-              📄 A4 Poster
-              <span className="block text-[10px] opacity-60">794 x 1123</span>
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Width</label>
-                <input
-                  type="number"
-                  value={width}
-                  onChange={(e) => setDimensions(parseInt(e.target.value) || 0, height)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Height</label>
-                <input
-                  type="number"
-                  value={height}
-                  onChange={(e) => setDimensions(width, parseInt(e.target.value) || 0)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Add Text */}
-        <button
-          onClick={addText}
-          className="block mb-4 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-medium"
-        >
-          Add Text
-        </button>
-
-        {/* Duplicate */}
-        <button
-          onClick={duplicateSelected}
-          className="block mb-4 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-medium w-full text-left flex items-center justify-between transition-colors border border-gray-600"
-        >
-          <div className="flex items-center gap-2">
-            📄 Duplicate
-          </div>
-          <span className="text-[10px] opacity-40 bg-black/40 px-1.5 py-0.5 rounded font-mono">
-            Ctrl+D
-          </span>
-        </button>
-
-        {/* Delete */}
-        <button
-          onClick={deleteSelected}
-          className="block mb-4 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-medium"
-        >
-          Delete Selected
-        </button>
-
-
-        {/* Shapes as Rectangle and Circle */}
-        <button
-          onClick={addRectangle}
-          className="block mb-4 bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium"
-        >
-          ▭ Add Rectangle
-        </button>
-
-        <button
-          onClick={addCircle}
-          className="block mb-4 bg-pink-500 hover:bg-pink-600 px-4 py-2 rounded-lg font-medium"
-        >
-          ⚪ Add Circle
-        </button>
-
-
-        {/* Export */}
-        <div className="mb-4 p-3 bg-gray-800 rounded-xl border border-gray-700">
-          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-            📤 Export Options
-          </h3>
-
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <button
-              onClick={() => setExportFormat("png")}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "png" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-            >
-              PNG
-            </button>
-            <button
-              onClick={() => setExportFormat("jpeg")}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "jpeg" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-            >
-              JPG
-            </button>
-          </div>
-
-          <label className="inline-flex items-center cursor-pointer mb-3 mt-2">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={highQuality}
-              onChange={() => setHighQuality(!highQuality)}
-            />
-            <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-            <span className="ml-3 text-xs font-medium text-gray-300">
-              High Quality (2x)
-            </span>
-          </label>
-
-          <label className={`inline-flex items-center cursor-pointer mb-5 ${exportFormat === "jpeg" ? "opacity-50 cursor-not-allowed" : ""}`} title={exportFormat === "jpeg" ? "Transparency not supported in JPG" : ""}>
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={transparentBg}
-              onChange={() => setTransparentBg(!transparentBg)}
-              disabled={exportFormat === "jpeg"}
-            />
-            <div className={`relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${transparentBg && exportFormat === "png" ? 'peer-checked:bg-yellow-500' : ''}`}></div>
-            <span className="ml-3 text-xs font-medium text-gray-300">
-              Transparent BG
-            </span>
-          </label>
-
-          <button
-            onClick={exportImage}
-            className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-2 rounded-lg font-bold transition-colors"
-          >
-            Export as {exportFormat.toUpperCase()}
-          </button>
-        </div>
-
-        {/* Save / Load Design */}
-        <button
-          onClick={saveDesign}
-          className="block mb-4 bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded-lg font-medium w-full text-left"
-        >
-          💾 Save Design
-        </button>
-
-        <label className="block mb-4">
-          <span className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium w-full text-left">
-            📂 Load Design
-          </span>
-
-          <input
-            type="file"
-            accept=".json"
-            onChange={loadDesign}
-            className="hidden"
-          />
-        </label>
-
-        {/* Undo Redo Buttons*/}
-        <button
-          onClick={undo}
-          className="block mb-4 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg"
-        >
-          Undo
-        </button>
-
-        <button
-          onClick={redo}
-          className="block mb-4 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg"
-        >
-          Redo
-        </button>
-
-        {/* ✅ Snap to Grid Toggle */}
-        <div className="mb-4 mt-2">
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={snapToGrid}
-              onChange={() => setSnapToGrid(!snapToGrid)}
-            />
-            <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-            <span className="ml-3 font-medium text-gray-200">
-              Snap to Grid
-            </span>
-          </label>
-        </div>
-
-        {/* ✅ Alignment Tools */}
-        <div className="mb-4">
-          <h3 className="font-bold mb-2">Alignment & Layers</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={alignLeft}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + ArrowLeft"
-            >
-              Left
-            </button>
-            <button
-              onClick={alignRight}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + ArrowRight"
-            >
-              Right
-            </button>
-            <button
-              onClick={alignTop}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + ArrowUp"
-            >
-              Top
-            </button>
-            <button
-              onClick={alignBottom}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + ArrowDown"
-            >
-              Bottom
-            </button>
-            <button
-              onClick={alignCenter}
-              className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + Shift + C"
-            >
-              Center
-            </button>
-            <button
-              onClick={alignMiddle}
-              className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + Shift + M"
-            >
-              Middle
-            </button>
-            <button
-              onClick={bringToFront}
-              className="bg-emerald-600 hover:bg-emerald-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + ]"
-            >
-              Forward
-            </button>
-            <button
-              onClick={sendToBack}
-              className="bg-emerald-600 hover:bg-emerald-700 px-2 py-2 rounded-lg font-medium text-xs"
-              title="Ctrl + ["
-            >
-              Backward
-            </button>
-          </div>
-        </div>
-
-        {/* Upload Image */}
-        <label className="block mb-4">
-          <span className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium">
-            📁 Upload Image
-          </span>
-
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-        </label>
-
-        {/* Color Picker */}
-        <div className="mt-4">
-          <p className="mb-2 font-medium">Text Color</p>
-          <input
-            type="color"
-            onChange={changeColor}
-            className="w-full h-10 cursor-pointer"
-          />
-        </div>
-
-        {/* Font Size */}
-        <div className="mt-4">
-          <p className="mb-2 font-medium">Font Size</p>
-          <input
-            type="range"
-            min="10"
-            max="100"
-            value={fontSize}
-            onChange={changeFontSize}
-            className="w-full"
-          />
-          <p className="text-sm mt-1 text-gray-300">
-            Size: {fontSize}px
-          </p>
-        </div>
-
-        {/* Font Family */}
-        <div className="mt-4">
-          <p className="mb-2 font-medium">Font Family</p>
-          <select
-            onChange={changeFontFamily}
-            className="w-full p-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:outline-none focus:border-indigo-500"
-          >
-            {FONTS_LIST.map((font) => (
-              <option key={font} value={font} style={{ fontFamily: font }}>
-                {font}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Text Styling & Effects */}
-        {(activeObjectType === "textbox" || activeObjectType === "text") && (
-          <div className="mt-6 border-t border-gray-700 pt-4">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-              🎭 Text Styles & Effects
+          {/* Canvas Size Control */}
+          <div className="mb-6 p-3 bg-gray-800 rounded-xl border border-gray-700">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              📏 Canvas Size
             </h3>
-            <div className="flex gap-2 mb-4">
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
               <button
-                onClick={toggleBold}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 p-2 rounded-lg font-bold border border-gray-600"
-                title="Ctrl + B"
+                onClick={() => setDimensions(1080, 1080)}
+                className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 1080 && height === 1080 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
               >
-                B
+                Instagram
+                <span className="block text-[10px] opacity-60">1080 x 1080</span>
               </button>
               <button
-                onClick={toggleItalic}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 p-2 italic rounded-lg border border-gray-600"
-                title="Ctrl + I"
+                onClick={() => setDimensions(794, 1123)}
+                className={`p-2 rounded-lg text-xs font-medium transition-all ${width === 794 && height === 1123 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
               >
-                I
+                A4 Poster
+                <span className="block text-[10px] opacity-60">794 x 1123</span>
               </button>
             </div>
 
             <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Width</label>
+                  <input
+                    type="number"
+                    value={width}
+                    onChange={(e) => setDimensions(parseInt(e.target.value) || 0, height)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] text-gray-500 uppercase font-bold ml-1">Height</label>
+                  <input
+                    type="number"
+                    value={height}
+                    onChange={(e) => setDimensions(width, parseInt(e.target.value) || 0)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-md p-1.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Add Text */}
+          <button
+            onClick={addText}
+            className="block mb-4 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-medium"
+          >
+            Add Text
+          </button>
+
+          {/* Duplicate */}
+          <button
+            onClick={duplicateSelected}
+            className="block mb-4 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-medium w-full text-left flex items-center justify-between transition-colors border border-gray-600"
+          >
+            <div className="flex items-center gap-2">
+              Duplicate
+            </div>
+            <span className="text-[10px] opacity-40 bg-black/40 px-1.5 py-0.5 rounded font-mono">
+              Ctrl+D
+            </span>
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={deleteSelected}
+            className="block mb-4 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-medium"
+          >
+            Delete Selected
+          </button>
+
+
+          {/* Shapes as Rectangle and Circle */}
+          <button
+            onClick={addRectangle}
+            className="block mb-4 bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium"
+          >
+            ▭ Add Rectangle
+          </button>
+
+          <button
+            onClick={addCircle}
+            className="block mb-4 bg-pink-500 hover:bg-pink-600 px-4 py-2 rounded-lg font-medium"
+          >
+            Add Circle
+          </button>
+
+
+          {/* Export */}
+          <div className="mb-4 p-3 bg-gray-800 rounded-xl border border-gray-700">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Export Options
+            </h3>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
               <button
-                onClick={toggleShadow}
-                className="w-full text-left bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-700 transition-colors"
+                onClick={() => setExportFormat("png")}
+                className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "png" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
               >
-                <span className="text-lg">🌑</span> Toggle Shadow
+                PNG
               </button>
               <button
-                onClick={toggleStroke}
-                className="w-full text-left bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-700 transition-colors"
+                onClick={() => setExportFormat("jpeg")}
+                className={`p-1.5 rounded-lg text-xs font-medium transition-all ${exportFormat === "jpeg" ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
               >
-                <span className="text-lg">🖋️</span> Toggle Outline
+                JPG
+              </button>
+            </div>
+
+            <label className="inline-flex items-center cursor-pointer mb-3 mt-2">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={highQuality}
+                onChange={() => setHighQuality(!highQuality)}
+              />
+              <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+              <span className="ml-3 text-xs font-medium text-gray-300">
+                High Quality (2x)
+              </span>
+            </label>
+
+            <label className={`inline-flex items-center cursor-pointer mb-5 ${exportFormat === "jpeg" ? "opacity-50 cursor-not-allowed" : ""}`} title={exportFormat === "jpeg" ? "Transparency not supported in JPG" : ""}>
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={transparentBg}
+                onChange={() => setTransparentBg(!transparentBg)}
+                disabled={exportFormat === "jpeg"}
+              />
+              <div className={`relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${transparentBg && exportFormat === "png" ? 'peer-checked:bg-yellow-500' : ''}`}></div>
+              <span className="ml-3 text-xs font-medium text-gray-300">
+                Transparent BG
+              </span>
+            </label>
+
+            <button
+              onClick={exportImage}
+              className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-2 rounded-lg font-bold transition-colors"
+            >
+              Export as {exportFormat.toUpperCase()}
+            </button>
+          </div>
+
+          {/* Save / Load Design */}
+          <button
+            onClick={saveDesign}
+            className="block mb-4 bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded-lg font-medium w-full text-left"
+          >
+            Save Design
+          </button>
+
+          <label className="block mb-4">
+            <span className="bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium w-full text-left">
+              Load Design
+            </span>
+
+            <input
+              type="file"
+              accept=".json"
+              onChange={loadDesign}
+              className="hidden"
+            />
+          </label>
+
+          {/* Undo Redo Buttons*/}
+          <button
+            onClick={undo}
+            className="block mb-4 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg"
+          >
+            Undo
+          </button>
+
+          <button
+            onClick={redo}
+            className="block mb-4 bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg"
+          >
+            Redo
+          </button>
+
+          {/* Snap to Grid Toggle */}
+          <div className="mb-4 mt-2">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={snapToGrid}
+                onChange={() => setSnapToGrid(!snapToGrid)}
+              />
+              <div className="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+              <span className="ml-3 font-medium text-gray-200">
+                Snap to Grid
+              </span>
+            </label>
+          </div>
+
+          {/* Alignment Tools */}
+          <div className="mb-4">
+            <h3 className="font-bold mb-2">Alignment & Layers</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={alignLeft}
+                className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + ArrowLeft"
+              >
+                Left
+              </button>
+              <button
+                onClick={alignRight}
+                className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + ArrowRight"
+              >
+                Right
+              </button>
+              <button
+                onClick={alignTop}
+                className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + ArrowUp"
+              >
+                Top
+              </button>
+              <button
+                onClick={alignBottom}
+                className="bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + ArrowDown"
+              >
+                Bottom
+              </button>
+              <button
+                onClick={alignCenter}
+                className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + Shift + C"
+              >
+                Center
+              </button>
+              <button
+                onClick={alignMiddle}
+                className="bg-purple-600 hover:bg-purple-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + Shift + M"
+              >
+                Middle
+              </button>
+              <button
+                onClick={bringToFront}
+                className="bg-emerald-600 hover:bg-emerald-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + ]"
+              >
+                Forward
+              </button>
+              <button
+                onClick={sendToBack}
+                className="bg-emerald-600 hover:bg-emerald-700 px-2 py-2 rounded-lg font-medium text-xs"
+                title="Ctrl + ["
+              >
+                Backward
               </button>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* 🎨 Canvas */}
-      <div className="flex-1 flex items-center justify-center relative bg-[#1a1a1a] overflow-hidden">
-        <Canvas />
-
-        {/* 🔍 Zoom Controls */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-gray-900/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-gray-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
-          <button
-            onClick={zoomOut}
-            className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
-            title="Zoom Out (-)"
-          >
-            &minus;
-          </button>
-
-          <div className="flex items-center gap-3 min-w-[150px]">
-            <input
-              type="range"
-              min="0.1"
-              max="5"
-              step="0.01"
-              value={zoom}
-              onChange={(e) => handleZoom(parseFloat(e.target.value))}
-              className="flex-1 h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
-            />
-            <span className="text-[10px] font-black text-gray-300 w-10 text-right">
-              {Math.round(zoom * 100)}%
+          {/* Upload Image */}
+          <label className="block mb-4">
+            <span className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg cursor-pointer inline-block font-medium">
+              Upload Image
             </span>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </label>
+
+          {/* Color Picker */}
+          <div className="mt-4">
+            <p className="mb-2 font-medium">Text Color</p>
+            <input
+              type="color"
+              onChange={changeColor}
+              className="w-full h-10 cursor-pointer"
+            />
           </div>
 
-          <button
-            onClick={zoomIn}
-            className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
-            title="Zoom In (+)"
-          >
-            +
-          </button>
+          {/* Font Size */}
+          <div className="mt-4">
+            <p className="mb-2 font-medium">Font Size</p>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              value={fontSize}
+              onChange={changeFontSize}
+              className="w-full"
+            />
+            <p className="text-sm mt-1 text-gray-300">
+              Size: {fontSize}px
+            </p>
+          </div>
 
-          <div className="w-[1px] h-4 bg-gray-700/50 mx-1"></div>
-
-          <button
-            onClick={resetZoom}
-            className="text-[10px] font-black tracking-tighter text-indigo-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-indigo-600 transition-all shadow-sm"
-          >
-            100%
-          </button>
-        </div>
-      </div>
-
-      {/* 📚 Layer Panel */}
-      <div className="w-64 bg-gray-900 p-4 border-l border-gray-700 flex flex-col">
-        <h2 className="text-xl font-bold mb-4">Layers</h2>
-
-        <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-          {canvasObjects.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No layers yet.</p>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+          {/* Font Family */}
+          <div className="mt-4">
+            <p className="mb-2 font-medium">Font Family</p>
+            <select
+              onChange={changeFontFamily}
+              className="w-full p-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:outline-none focus:border-indigo-500"
             >
-              <SortableContext
-                items={canvasObjects.map(obj => (obj.id || obj.toString()))}
-                strategy={verticalListSortingStrategy}
-              >
-                {canvasObjects.slice().reverse().map((obj, index) => (
-                  <SortableLayer
-                    key={obj.id || obj.toString()}
-                    obj={obj}
-                    index={index}
-                    canvas={canvas}
-                    getLayerName={getLayerName}
-                    selectLayer={selectLayer}
-                    moveLayerUp={moveLayerUp}
-                    moveLayerDown={moveLayerDown}
-                    deleteLayer={deleteLayer}
-                    duplicateLayer={duplicateLayer}
-                    toggleLock={toggleLock}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
+              {FONTS_LIST.map((font) => (
+                <option key={font} value={font} style={{ fontFamily: font }}>
+                  {font}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Text Styling & Effects */}
+          {(activeObjectType === "textbox" || activeObjectType === "text") && (
+            <div className="mt-6 border-t border-gray-700 pt-4">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                Text Styles & Effects
+              </h3>
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={toggleBold}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 p-2 rounded-lg font-bold border border-gray-600"
+                  title="Ctrl + B"
+                >
+                  B
+                </button>
+                <button
+                  onClick={toggleItalic}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 p-2 italic rounded-lg border border-gray-600"
+                  title="Ctrl + I"
+                >
+                  I
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  onClick={toggleShadow}
+                  className="w-full text-left bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-700 transition-colors"
+                >
+                  <span className="text-lg">🌑</span> Toggle Shadow
+                </button>
+                <button
+                  onClick={toggleStroke}
+                  className="w-full text-left bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-700 transition-colors"
+                >
+                  <span className="text-lg">🖋️</span> Toggle Outline
+                </button>
+              </div>
+            </div>
           )}
         </div>
-      </div>
+
+        {/* 🎨 Canvas */}
+        <div className="flex-1 flex items-center justify-center relative bg-[#1a1a1a] overflow-hidden min-h-0 min-w-0">
+          <Canvas />
+
+          {/* Zoom Controls */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-gray-900/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-gray-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
+            <button
+              onClick={zoomOut}
+              className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
+              title="Zoom Out (-)"
+            >
+              &minus;
+            </button>
+
+            <div className="flex items-center gap-3 min-w-[150px]">
+              <input
+                type="range"
+                min="0.1"
+                max="5"
+                step="0.01"
+                value={zoom}
+                onChange={(e) => handleZoom(parseFloat(e.target.value))}
+                className="flex-1 h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+              />
+              <span className="text-[10px] font-black text-gray-300 w-10 text-right">
+                {Math.round(zoom * 100)}%
+              </span>
+            </div>
+
+            <button
+              onClick={zoomIn}
+              className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full transition-all text-gray-400 hover:text-white"
+              title="Zoom In (+)"
+            >
+              +
+            </button>
+
+            <div className="w-[1px] h-4 bg-gray-700/50 mx-1"></div>
+
+            <button
+              onClick={resetZoom}
+              className="text-[10px] font-black tracking-tighter text-indigo-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-indigo-600 transition-all shadow-sm"
+            >
+              100%
+            </button>
+          </div>
+        </div>
+
+        {/* Layer Panel */}
+        <div className="w-64 bg-gray-900 p-4 border-l border-gray-700 flex flex-col">
+          <h2 className="text-xl font-bold mb-4">Layers</h2>
+
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+            {canvasObjects.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">No layers yet.</p>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={canvasObjects.map(obj => (obj.id || obj.toString()))}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {canvasObjects.slice().reverse().map((obj, index) => (
+                    <SortableLayer
+                      key={obj.id || obj.toString()}
+                      obj={obj}
+                      index={index}
+                      canvas={canvas}
+                      getLayerName={getLayerName}
+                      selectLayer={selectLayer}
+                      moveLayerUp={moveLayerUp}
+                      moveLayerDown={moveLayerDown}
+                      deleteLayer={deleteLayer}
+                      duplicateLayer={duplicateLayer}
+                      toggleLock={toggleLock}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+        </div>
 
       </div>
     </div>
