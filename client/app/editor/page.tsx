@@ -57,7 +57,7 @@ function SortableLayer({
     isDragging,
   } = useSortable({
     id: obj.id || obj.toString(),
-    disabled: obj.locked // Disable drag if locked
+    disabled: obj.locked 
   });
 
   const style = {
@@ -148,7 +148,6 @@ export default function EditorPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Lock body scroll unconditionally because of third party portal injections (fabric area / dnd regions)
     document.body.style.overflow = "hidden";
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -214,7 +213,6 @@ export default function EditorPage() {
   const updateLayers = useCallback(() => {
     if (!canvas) return;
     const objects = canvas.getObjects();
-    // Ensure all objects have a unique ID for DnD list
     objects.forEach((obj: any) => {
       if (!obj.id) {
         obj.set('id', Math.random().toString(36).substring(2, 9));
@@ -330,7 +328,6 @@ export default function EditorPage() {
   const saveState = () => {
     if (!canvas || isRestoring.current) return;
 
-    // Include custom properties in JSON for Persistence (locked, id)
     const json = { ...(canvas as any).toJSON(['locked', 'id']), backgroundColor: canvas.backgroundColor };
 
     const newStack = [...undoStackRef.current, json];
@@ -378,7 +375,6 @@ export default function EditorPage() {
     if (!activeObject) return;
 
     if ("set" in activeObject && "fontFamily" in activeObject) {
-      // Ensure the font is loaded in the browser before Fabric.js renders
       if ((document as any).fonts) {
         try {
           await (document as any).fonts.load(`1em ${font}`);
@@ -542,23 +538,19 @@ export default function EditorPage() {
   const exportImage = () => {
     if (!canvas) return;
 
-    // Save current values to restore later
     const originalBg = canvas.backgroundColor;
 
-    // Apply transparent background if applicable
     if (transparentBg && exportFormat === "png") {
       canvas.backgroundColor = "rgba(0,0,0,0)";
     } else if (exportFormat === "jpeg" && (originalBg === null || (originalBg as any)?.source !== undefined)) {
-      // JPEG doesn't support transparency, force white background
       canvas.backgroundColor = "#ffffff";
     }
 
     canvas.renderAll();
 
-    // High quality = 2x multiplier
+    // High quality 
     const multiplier = highQuality ? 2 : 1;
 
-    // For JPEG quality, set between 0 and 1
     const qualityStr = exportFormat === "jpeg" ? (highQuality ? 1.0 : 0.6) : 1;
 
     const dataURL = canvas.toDataURL({
@@ -567,7 +559,6 @@ export default function EditorPage() {
       multiplier: multiplier,
     });
 
-    // Restore original background
     canvas.backgroundColor = originalBg;
     canvas.renderAll();
 
@@ -577,7 +568,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Save Design (JSON)
+  // Save Design 
   const saveDesign = () => {
     if (!canvas) return;
 
@@ -590,7 +581,7 @@ export default function EditorPage() {
     link.click();
   };
 
-  // Load Design (JSON)
+  // Load Design 
   const loadDesign = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
 
@@ -611,7 +602,6 @@ export default function EditorPage() {
         canvas.renderAll();
         updateLayers();
 
-        // Reset undo/redo stacks to reflect the newly loaded state
         const newState = { ...canvas.toJSON(), backgroundColor: canvas.backgroundColor };
         undoStackRef.current = [newState];
         setUndoStack([newState]);
@@ -621,7 +611,6 @@ export default function EditorPage() {
         alert("Failed to load design. Invalid JSON file.");
       } finally {
         isRestoring.current = false;
-        // Clear input so same file can be loaded again if needed
         e.target.value = '';
       }
     };
@@ -635,7 +624,6 @@ export default function EditorPage() {
 
     const clampedZoom = Math.min(Math.max(newZoom, 0.1), 5);
 
-    // Zoom from center of the canvas viewport
     const center = (canvas as any).getVpCenter();
     canvas.zoomToPoint(new fabric.Point(center.x, center.y), clampedZoom);
     setZoom(clampedZoom);
@@ -787,8 +775,8 @@ export default function EditorPage() {
       lockScalingX: isLocked,
       lockScalingY: isLocked,
       lockRotation: isLocked,
-      hasControls: !isLocked, // Hide controls when locked
-      editable: !isLocked,    // Disable text editing if applicable
+      hasControls: !isLocked, 
+      editable: !isLocked,
     });
 
     if (isLocked) {
@@ -820,8 +808,6 @@ export default function EditorPage() {
         const objects = canvas.getObjects();
         const obj = objects[oldIndex];
 
-        // fabricjs reordering is a bit tricky
-        // we'll need to move it in the actual fabric objects array
         canvas.moveObjectTo(obj, newIndex);
         canvas.renderAll();
         canvas.fire("object:modified" as any);
@@ -927,7 +913,6 @@ export default function EditorPage() {
         }
       }
 
-      // Support zoom with just +/- even without Ctrl (if not in input)
       if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
         if (e.key === "+" || (e.key === "=" && !e.shiftKey)) {
           zoomIn();
@@ -956,7 +941,6 @@ export default function EditorPage() {
   useEffect(() => {
     if (!canvas) return;
 
-    // Use a stable reference so the handler always calls the latest saveState
     const handler = () => {
       saveState();
       updateLayers();
@@ -1030,7 +1014,6 @@ export default function EditorPage() {
       const ctx = gridCanvas.getContext("2d");
 
       if (ctx) {
-        // Maintain white background
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
 
@@ -1105,7 +1088,7 @@ export default function EditorPage() {
           {/* Canvas Size Control */}
           <div className="mb-6 p-3 bg-gray-800 rounded-xl border border-gray-700">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              📏 Canvas Size
+              Canvas Size
             </h3>
 
             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1184,7 +1167,7 @@ export default function EditorPage() {
             onClick={addRectangle}
             className="block mb-4 bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium"
           >
-            ▭ Add Rectangle
+            Add Rectangle
           </button>
 
           <button
@@ -1462,7 +1445,7 @@ export default function EditorPage() {
           )}
         </div>
 
-        {/* 🎨 Canvas */}
+        {/* Canvas */}
         <div className="flex-1 flex items-center justify-center relative bg-[#1a1a1a] overflow-hidden min-h-0 min-w-0">
           <Canvas />
 
